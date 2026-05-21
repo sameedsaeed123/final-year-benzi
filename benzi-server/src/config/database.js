@@ -2,19 +2,16 @@ import mongoose from 'mongoose'
 
 let connected = false
 
-/**
- * Ensures a database name in the path (e.g. ...:5432/?x -> ...:5432/benzi?x).
- * Empty path defaults MongoDB to "test"; we use "benzi" for this app.
- */
+
 export function normalizeMongoUri(uri) {
   if (!uri || typeof uri !== 'string') return uri
   const trimmed = uri.trim()
-  // mongodb://user:pass@host:port?query  (no slash before ?)
+
   const noSlashBeforeQuery = /^(mongodb(?:\+srv)?:\/\/[^/?]+)\?(.+)$/.exec(trimmed)
   if (noSlashBeforeQuery) {
     return `${noSlashBeforeQuery[1]}/benzi?${noSlashBeforeQuery[2]}`
   }
-  // mongodb://user:pass@host:port/?query  (empty database)
+
   const emptyDb = /^(mongodb(?:\+srv)?:\/\/[^/]+)\/(\?.*)?$/.exec(trimmed)
   if (emptyDb) {
     const rest = emptyDb[2] || ''

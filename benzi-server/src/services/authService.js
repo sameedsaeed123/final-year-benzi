@@ -7,7 +7,8 @@ import { ensureProfilesAfterAuth } from './profileService.js'
 const SALT_ROUNDS = 12
 
 export async function registerUser(payload) {
-  const existing = await User.findOne({ email: payload.email })
+  const emailLower = payload.email.toLowerCase().trim()
+  const existing = await User.findOne({ email: emailLower })
   if (existing) {
     const err = new Error('An account with this email already exists')
     err.statusCode = 409
@@ -15,13 +16,13 @@ export async function registerUser(payload) {
   }
   const passwordHash = await bcrypt.hash(payload.password, SALT_ROUNDS)
   const user = await User.create({
-    email: payload.email,
+    email: emailLower,
     passwordHash,
     role: payload.role,
     firstName: payload.firstName,
     lastName: payload.lastName,
     phone: payload.phone || '',
-    status: 'VERIFIED',
+    status: payload.role === 'therapist' ? 'PENDING_VERIFICATION' : 'VERIFIED',
   })
   await ensureProfilesAfterAuth(user)
   return user
@@ -62,6 +63,7 @@ export async function changeUserPassword(userId, oldPassword, newPassword) {
     throw err
   }
   user.passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS)
+  user.isTemporaryPassword = false
   await user.save()
   return user
 }
@@ -115,5 +117,8 @@ export function toPublicUser(user) {
     lastName: user.lastName,
     phone: user.phone || '',
     profileImageUrl: user.profileImageUrl || '',
+    status: user.status,
+    isTemporaryPassword: user.isTemporaryPassword || false,
+    twoFactorEnabled: user.twoFactorEnabled || false,
   }
 }

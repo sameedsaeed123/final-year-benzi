@@ -24,4 +24,6 @@ export const env = {
   JWT_SECRET: process.env.JWT_SECRET,
   JWT_EXPIRES_IN_REMEMBER: process.env.JWT_EXPIRES_IN_REMEMBER || '7d',
   JWT_EXPIRES_IN_SESSION: process.env.JWT_EXPIRES_IN_SESSION || '1h',
+  ADMIN_AES_KEY: process.env.ADMIN_AES_KEY || 'BENZI_SECURE_ADMIN_AES_KEY_32CH_',
 }
+

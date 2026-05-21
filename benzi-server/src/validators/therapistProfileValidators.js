@@ -12,4 +12,8 @@ export const therapistProfilePatchSchema = Joi.object({
   experienceYears: Joi.number().min(0).max(80).optional(),
   bio: Joi.string().trim().max(4000).allow('').optional(),
   waitTimeLabel: Joi.string().trim().max(80).allow('').optional(),
+  availableLocations: Joi.array().items(Joi.string().trim()).optional(),
+  paymentBankName: Joi.string().trim().max(100).allow('').optional(),
+  paymentAccountName: Joi.string().trim().max(100).allow('').optional(),
+  paymentAccountNumber: Joi.string().trim().max(100).allow('').optional(),
 }).min(1)

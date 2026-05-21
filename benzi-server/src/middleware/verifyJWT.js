@@ -38,3 +38,34 @@ export function requireRoles(...roles) {
     next()
   }
 }
+
+export async function optionalVerifyJWT(req, res, next) {
+  const header = req.headers.authorization || ''
+  const token = header.startsWith('Bearer ') ? header.slice(7) : null
+  console.log(`[optionalVerifyJWT] Header: "${header}" | Token: "${token ? token.slice(0, 15) + '...' : 'null'}"`)
+  if (!token) {
+    return next()
+  }
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET)
+    const user = await User.findById(payload.sub).select('email role firstName lastName phone status profileImageUrl')
+    if (user && user.status !== 'SUSPENDED') {
+      req.user = {
+        id: user._id.toString(),
+        email: user.email,
+        role: user.role,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone || '',
+        profileImageUrl: user.profileImageUrl || '',
+      }
+      console.log(`[optionalVerifyJWT] Successfully authenticated user: ${user.email} (ID: ${user._id})`)
+    } else {
+      console.log(`[optionalVerifyJWT] User not found or suspended: ${payload.sub}`)
+    }
+    return next()
+  } catch (err) {
+    console.error(`[optionalVerifyJWT] JWT Verification failed:`, err.message)
+    return next()
+  }
+}

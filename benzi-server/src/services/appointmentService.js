@@ -1,6 +1,7 @@
 import { Appointment } from '../models/Appointment.js'
 import { User } from '../models/User.js'
 import { Therapist } from '../models/Therapist.js'
+import { Patient } from '../models/Patient.js'
 
 function statusUi(s) {
   const m = { PENDING: 'Pending', CONFIRMED: 'Confirmed', COMPLETED: 'Completed', CANCELLED: 'Cancelled' }
@@ -57,6 +58,23 @@ function overlaps(aStart, aEnd, bStart, bEnd) {
   return aStart < bEnd && aEnd > bStart
 }
 
+// ─── Fetch anonymous status map for a list of patient user IDs ───────────────
+async function getAnonymousMap(patientUserIds) {
+  if (!patientUserIds.length) return {}
+  const records = await Patient.find({ userId: { $in: patientUserIds } })
+    .select('userId anonymousModeEnabled anonymousAlias')
+    .lean()
+  return Object.fromEntries(
+    records.map((p) => [
+      String(p.userId),
+      {
+        isAnonymous: p.anonymousModeEnabled || false,
+        alias: p.anonymousAlias || `Patient #${String(p.userId).slice(-4).toUpperCase()}`,
+      },
+    ])
+  )
+}
+
 export async function listAppointmentsForPatient(patientUserId) {
   const list = await Appointment.find({ patientUserId })
     .sort({ date: -1 })
@@ -95,7 +113,13 @@ export async function listAppointmentsForPatient(patientUserId) {
       return locationUi(a.location)
     })(),
     status: statusUi(a.status),
-    action: 'mail',
+    statusCode: a.status,
+    locationCode: a.location,
+    meetLink: a.meetLink || '',
+    bookedAsAnonymous: Boolean(a.bookedAsAnonymous),
+    meetJoinAlias: a.patientMeetDisplayName || '',
+    videoProvider: a.videoProvider || 'google',
+    action: a.meetLink ? 'meet' : 'mail',
   }))
 }
 export async function listAppointmentsForTherapist(therapistUserId) {
@@ -115,28 +139,89 @@ export async function listAppointmentsForTherapist(therapistUserId) {
     ])
   )
 
+  // Anonymous masking
+  const anonMap = await getAnonymousMap(patientIds)
+
   const therapistExt = await Therapist.findOne({ userId: therapistUserId })
     .select('availableLocationLabels availableLocations')
     .lean()
 
+  return list.map((a) => {
+    const pid = String(a.patientUserId)
+    const anon = anonMap[pid] || { isAnonymous: false, alias: 'Patient' }
+    const isAnonSession = Boolean(a.bookedAsAnonymous || anon.isAnonymous)
+
+    // Format price
+    const priceFormatted = a.servicePriceAtBooking 
+      ? `PKR ${Math.round(a.servicePriceAtBooking / 100)}`
+      : 'N/A'
+    
+    return {
+      id: String(a._id).slice(-8).toUpperCase(),
+      patient: isAnonSession ? 'Anonymous patient' : (nameById[pid] || 'Patient'),
+      isAnonymous: isAnonSession,
+      serviceName: a.serviceName || 'General Session',
+      servicePrice: priceFormatted,
+      servicePriceRaw: a.servicePriceAtBooking || 0,
+      dateTime: formatDateTime(a.date),
+      duration: `${a.durationMinutes} min`,
+      paymentMethod: a.paymentMethod || 'onsite',
+      paymentStatus: a.paymentStatus || 'PENDING',
+      paymentStatusLabel: paymentStatusUi(a.paymentStatus),
+      paymentScreenshotUrl: a.paymentScreenshotUrl || '',
+      location: (() => {
+        if (therapistExt && therapistExt.availableLocationLabels && typeof therapistExt.availableLocationLabels === 'object') {
+          const label = therapistExt.availableLocationLabels[a.location]
+          if (label) return label
+        }
+        return locationUi(a.location)
+      })(),
+      status: statusUi(a.status),
+      statusCode: a.status,
+      locationCode: a.location,
+      meetLink: isAnonSession ? (a.therapistMeetLink || a.meetLink || '') : (a.meetLink || ''),
+      bookedAsAnonymous: Boolean(a.bookedAsAnonymous),
+      videoProvider: a.videoProvider || 'google',
+      action: a.meetLink ? 'meet' : 'mail',
+    }
+  })
+}
+
+export async function listAppointmentsForAdmin() {
+  const list = await Appointment.find({})
+    .sort({ date: -1 })
+    .limit(200)
+    .lean()
+
+  const patientIds = [...new Set(list.map((a) => String(a.patientUserId)))]
+  const therapistIds = [...new Set(list.map((a) => String(a.therapistUserId)))]
+
+  const [patients, therapists] = await Promise.all([
+    User.find({ _id: { $in: patientIds } }).select('firstName lastName email').lean(),
+    User.find({ _id: { $in: therapistIds } }).select('firstName lastName email').lean(),
+  ])
+
+  const patientNameById = Object.fromEntries(
+    patients.map((p) => [String(p._id), `${p.firstName || ''} ${p.lastName || ''}`.trim() || 'Patient'])
+  )
+  const therapistNameById = Object.fromEntries(
+    therapists.map((t) => [String(t._id), `Dr. ${t.firstName || ''} ${t.lastName || ''}`.trim() || 'Therapist'])
+  )
+
   return list.map((a) => ({
     id: String(a._id).slice(-8).toUpperCase(),
-    patient: nameById[String(a.patientUserId)] || 'Patient',
+    fullId: String(a._id),
+    patient: patientNameById[String(a.patientUserId)] || 'Patient',
+    therapist: therapistNameById[String(a.therapistUserId)] || 'Therapist',
+    serviceName: a.serviceName || 'Session',
     dateTime: formatDateTime(a.date),
     duration: `${a.durationMinutes} min`,
-    paymentMethod: a.paymentMethod || 'onsite',
-    paymentStatus: paymentStatusUi(a.paymentStatus),
-    paymentScreenshotUrl: a.paymentScreenshotUrl || '',
-    // use therapist extension label overrides when present
-    location: (() => {
-      if (therapistExt && therapistExt.availableLocationLabels && typeof therapistExt.availableLocationLabels === 'object') {
-        const label = therapistExt.availableLocationLabels[a.location]
-        if (label) return label
-      }
-      return locationUi(a.location)
-    })(),
+    location: locationUi(a.location),
+    locationCode: a.location,
     status: statusUi(a.status),
-    action: 'mail',
+    statusCode: a.status,
+    paymentStatus: paymentStatusUi(a.paymentStatus),
+    meetLink: a.meetLink || '',
   }))
 }
 
@@ -184,10 +269,144 @@ export async function getTherapistAvailabilitySlots({ therapistUserId, date, dur
   const candidateSlots = daySlots.flatMap((s) => buildSlotsForRange(s.start, s.end, durationMinutes))
 
   const available = candidateSlots.filter((slot) => {
+    // Check if the slot has already passed in Pakistan time (UTC+5)
+    const slotDateTime = new Date(`${date}T${slot.start}:00+05:00`)
+    if (slotDateTime.getTime() <= Date.now()) {
+      return false
+    }
+
     const start = timeToMinutes(slot.start)
     const end = timeToMinutes(slot.end)
     return !bookedRanges.some((b) => overlaps(start, end, b.start, b.end))
   })
 
   return { date, durationMinutes, slots: available }
+}
+
+export async function getAppointmentDetail(appointmentId, requestingUserId, requestingRole) {
+  if (!appointmentId || appointmentId.length < 8) {
+    const err = new Error('Invalid appointment id')
+    err.statusCode = 400
+    throw err
+  }
+
+  // Support both full ObjectId and the 8-char display id
+  let doc = null
+  const mongoose = (await import('mongoose')).default
+  if (mongoose.Types.ObjectId.isValid(appointmentId)) {
+    doc = await Appointment.findById(appointmentId).lean()
+  } else {
+    // search by last 8 chars of _id (display id)
+    const all = await Appointment.find({}).select('_id').lean()
+    const match = all.find((a) => String(a._id).slice(-8).toUpperCase() === appointmentId.toUpperCase())
+    if (match) doc = await Appointment.findById(match._id).lean()
+  }
+
+  if (!doc) {
+    const err = new Error('Appointment not found')
+    err.statusCode = 404
+    throw err
+  }
+
+  // RBAC: patient can only see own, therapist can only see own
+  if (requestingRole === 'patient' && String(doc.patientUserId) !== String(requestingUserId)) {
+    const err = new Error('Forbidden')
+    err.statusCode = 403
+    throw err
+  }
+  if (requestingRole === 'therapist' && String(doc.therapistUserId) !== String(requestingUserId)) {
+    const err = new Error('Forbidden')
+    err.statusCode = 403
+    throw err
+  }
+
+  const [patientUser, therapistUser] = await Promise.all([
+    User.findById(doc.patientUserId).select('firstName lastName email phone').lean(),
+    User.findById(doc.therapistUserId).select('firstName lastName email').lean(),
+  ])
+
+  // Check anonymous mode — mask patient identity from therapist
+  let patientName = patientUser ? `${patientUser.firstName || ''} ${patientUser.lastName || ''}`.trim() : 'Patient'
+  let patientEmail = patientUser?.email || ''
+  let patientPhone = patientUser?.phone || ''
+
+  if (requestingRole === 'therapist') {
+    if (doc.bookedAsAnonymous) {
+      patientName = 'Anonymous patient'
+      patientEmail = ''
+      patientPhone = ''
+    } else {
+      const anonRecord = await Patient.findOne({ userId: doc.patientUserId })
+        .select('anonymousModeEnabled anonymousAlias')
+        .lean()
+      if (anonRecord?.anonymousModeEnabled) {
+        patientName = 'Anonymous patient'
+        patientEmail = ''
+        patientPhone = ''
+      }
+    }
+  }
+
+  return {
+    id: String(doc._id).slice(-8).toUpperCase(),
+    fullId: String(doc._id),
+    patient: patientName,
+    patientEmail,
+    patientPhone,
+    therapist: therapistUser ? `${therapistUser.firstName || ''} ${therapistUser.lastName || ''}`.trim() : 'Therapist',
+    therapistEmail: therapistUser?.email || '',
+    dateTime: formatDateTime(doc.date),
+    rawDate: doc.date,
+    duration: `${doc.durationMinutes} min`,
+    durationMinutes: doc.durationMinutes,
+    location: locationUi(doc.location),
+    locationCode: doc.location,
+    status: statusUi(doc.status),
+    statusCode: doc.status,
+    paymentMethod: doc.paymentMethod || 'onsite',
+    paymentStatus: paymentStatusUi(doc.paymentStatus),
+    paymentStatusCode: doc.paymentStatus,
+    paymentScreenshotUrl: doc.paymentScreenshotUrl || '',
+    meetLink:
+      requestingRole === 'therapist' && doc.bookedAsAnonymous
+        ? doc.therapistMeetLink || doc.meetLink || ''
+        : doc.meetLink || '',
+    bookedAsAnonymous: Boolean(doc.bookedAsAnonymous),
+    videoProvider: doc.videoProvider || 'google',
+    createdAt: doc.createdAt,
+  }
+}
+
+export async function getTherapistAppointmentDates(therapistUserId, year, month) {
+  // month is 1-based (1=Jan, 12=Dec)
+  if (!year || !month || month < 1 || month > 12) {
+    const now = new Date()
+    year = now.getFullYear()
+    month = now.getMonth() + 1
+  }
+  const start = new Date(year, month - 1, 1)
+  const end = new Date(year, month, 1)
+
+  const appointments = await Appointment.find({
+    therapistUserId,
+    status: { $in: ['PENDING', 'CONFIRMED', 'COMPLETED'] },
+    date: { $gte: start, $lt: end },
+  })
+    .select('date status')
+    .lean()
+
+  // Return set of day numbers that have appointments
+  const bookedDays = [...new Set(appointments.map((a) => new Date(a.date).getDate()))]
+  const pendingDays = [...new Set(
+    appointments
+      .filter((a) => a.status === 'PENDING')
+      .map((a) => new Date(a.date).getDate())
+  )]
+  const confirmedDays = [...new Set(
+    appointments
+      .filter((a) => a.status === 'CONFIRMED')
+      .map((a) => new Date(a.date).getDate())
+  )]
+
+  return { year, month, bookedDays, pendingDays, confirmedDays }
 }

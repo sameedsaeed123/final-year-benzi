@@ -1,9 +1,17 @@
+import mongoose from 'mongoose'
+import bcrypt from 'bcryptjs'
 import { sendSuccess, sendError } from '../utils/responseUtils.js'
 import { getTherapistDashboard } from '../services/therapistDashboardService.js'
 import { listTherapistDirectory } from '../services/therapistDirectoryService.js'
 import { getTherapistProfileForUser, updateTherapistProfileForUser } from '../services/therapistProfileService.js'
 import { therapistProfilePatchSchema } from '../validators/therapistProfileValidators.js'
 import { getTherapistAvailability, setTherapistAvailability, weeklyAvailabilitySchema } from '../services/therapistAvailabilityService.js'
+import { listClientsForTherapist } from '../services/patientService.js'
+import { listActiveTherapistServices } from '../services/therapistServicesService.js'
+import { User } from '../models/User.js'
+import { Patient } from '../models/Patient.js'
+import emailService from '../services/emailService.js'
+import { env } from '../config/environment.js'
 
 export async function therapistAvailabilityMe(req, res, next) {
   try {
@@ -74,3 +82,101 @@ export async function therapistDashboard(req, res, next) {
   }
 }
 
+export async function therapistClientsList(req, res, next) {
+  try {
+    const clients = await listClientsForTherapist(req.user.id)
+    return sendSuccess(res, { clients, total: clients.length }, 'OK', 200)
+  } catch (e) {
+    next(e)
+  }
+}
+
+
+export async function therapistServicesPublic(req, res, next) {
+  try {
+    const { therapistUserId } = req.params
+    if (!mongoose.Types.ObjectId.isValid(therapistUserId)) {
+      return sendError(res, 'Invalid therapist ID', 400)
+    }
+    const services = await listActiveTherapistServices(therapistUserId)
+    return sendSuccess(res, { services }, 'OK', 200)
+  } catch (e) {
+    if (e.statusCode) return sendError(res, e.message, e.statusCode)
+    next(e)
+  }
+}
+
+export async function invitePatient(req, res, next) {
+  try {
+    const { email, firstName, lastName, phone = '' } = req.body
+    if (!email || !firstName || !lastName) {
+      return sendError(res, 'Email, first name, and last name are required', 400)
+    }
+
+    const emailNormalized = email.toLowerCase().trim()
+    const existingUser = await User.findOne({ email: emailNormalized })
+    if (existingUser) {
+      return sendError(res, 'A user with this email address already exists', 400)
+    }
+
+    // Auto-generate a secure random temporary password (12 chars: uppercase, lowercase, digit, spec symbol)
+    const generateTempPassword = () => {
+      const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*'
+      let temp = ''
+      temp += 'A' + 'a' + '1' + '!' // Ensure it satisfies our Joi rules
+      for (let i = 0; i < 8; i++) {
+        temp += chars.charAt(Math.floor(Math.random() * chars.length))
+      }
+      return temp.split('').sort(() => 0.5 - Math.random()).join('')
+    }
+
+    const tempPassword = generateTempPassword()
+    const passwordHash = await bcrypt.hash(tempPassword, 12)
+
+    // Save as patient user
+    const newUser = new User({
+      email: emailNormalized,
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      phone: phone.trim(),
+      role: 'patient',
+      passwordHash,
+      isTemporaryPassword: true,
+      status: 'VERIFIED',
+    })
+    await newUser.save()
+
+    // Save patient profile
+    const newPatient = new Patient({
+      userId: newUser._id,
+      assignedTherapistUserId: req.user.id,
+      assignedAt: new Date(),
+    })
+    await newPatient.save()
+
+    // Retrieve therapist info for invitation branding
+    const therapistUser = await User.findById(req.user.id)
+    const therapistName = `Dr. ${therapistUser.firstName} ${therapistUser.lastName}`
+
+    const loginUrl = `${env.FRONTEND_URL || 'http://localhost:3000'}/login`
+
+    // Send invitation email in background
+    await emailService.sendPatientInvitation(
+      newUser.email,
+      `${newUser.firstName} ${newUser.lastName}`,
+      therapistName,
+      tempPassword,
+      loginUrl
+    )
+
+    return sendSuccess(res, {
+      id: newPatient._id,
+      userId: newUser._id,
+      email: newUser.email,
+      firstName: newUser.firstName,
+      lastName: newUser.lastName,
+    }, 'Patient invited and invitation email dispatched successfully.', 201)
+  } catch (e) {
+    next(e)
+  }
+}

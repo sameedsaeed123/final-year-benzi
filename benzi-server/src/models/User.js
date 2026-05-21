@@ -14,6 +14,8 @@ const userSchema = new mongoose.Schema(
     profileImageUrl: { type: String, default: '', trim: true },
     status: { type: String, enum: STATUSES, default: 'VERIFIED' },
     twoFactorEnabled: { type: Boolean, default: false },
+    isTemporaryPassword: { type: Boolean, default: false },
+    lastLoginAt: { type: Date, default: Date.now },
   },
   { timestamps: true }
 )

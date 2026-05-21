@@ -1,0 +1,72 @@
+=== BENZI STARTUP EMAIL LOG DIAGNOSTICS (GENERATED AT: 2026-05-21T06:50:12.867Z) ===
+
+[1] ID: 6a0d915c27726879c0be94d5
+Recipient: sam***@gmail.com
+Subject: New BENZI Appointment Booked - Patient #D7DE
+Status: sent
+Attempts: 1
+Created At: 2026-05-20T10:47:56.566Z
+-------------------------------------------
+[2] ID: 6a0d915c27726879c0be94d3
+Recipient: sam***@gmail.com
+Subject: Your BENZI Appointment Confirmation
+Status: sent
+Attempts: 1
+Created At: 2026-05-20T10:47:56.562Z
+-------------------------------------------
+[3] ID: 6a0d910727726879c0be9469
+Recipient: sam***@gmail.com
+Subject: Your BENZI Verification Code
+Status: sent
+Attempts: 1
+Created At: 2026-05-20T10:46:31.231Z
+-------------------------------------------
+[4] ID: 6a0d8c71882222610a29c0ec
+Recipient: sam***@gmail.com
+Subject: Your BENZI Appointment Status Updated
+Status: sent
+Attempts: 1
+Created At: 2026-05-20T10:26:57.804Z
+-------------------------------------------
+[5] ID: 6a0d8c6a882222610a29c0dd
+Recipient: sam***@gmail.com
+Subject: Your BENZI Appointment Status Updated
+Status: sent
+Attempts: 1
+Created At: 2026-05-20T10:26:50.268Z
+-------------------------------------------
+[6] ID: 6a0d8c5f882222610a29c0c3
+Recipient: sam***@gmail.com
+Subject: Your BENZI Appointment Status Updated
+Status: sent
+Attempts: 1
+Created At: 2026-05-20T10:26:39.162Z
+-------------------------------------------
+[7] ID: 6a0d8c08882222610a29c071
+Recipient: sam***@gmail.com
+Subject: Your BENZI Appointment Confirmation
+Status: sent
+Attempts: 1
+Created At: 2026-05-20T10:25:12.561Z
+-------------------------------------------
+[8] ID: 6a0d8c08882222610a29c06f
+Recipient: sam***@gmail.com
+Subject: New BENZI Appointment Booked - sameed saeed
+Status: sent
+Attempts: 1
+Created At: 2026-05-20T10:25:12.553Z
+-------------------------------------------
+[9] ID: 6a0d8bb533223ecb66ca6bf5
+Recipient: sam***@gmail.com
+Subject: Your BENZI Verification Code
+Status: sent
+Attempts: 1
+Created At: 2026-05-20T10:23:49.489Z
+-------------------------------------------
+[10] ID: 6a0d88dae779537cb464bfef
+Recipient: sam***@gmail.com
+Subject: Your BENZI Appointment Status Updated
+Status: sent
+Attempts: 1
+Created At: 2026-05-20T10:11:38.368Z
+-------------------------------------------

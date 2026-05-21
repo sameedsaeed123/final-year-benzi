@@ -49,6 +49,9 @@ export async function getTherapistProfileForUser(userId) {
       avgRating: t.avgRating ?? 0,
       reviewCount: t.reviewCount ?? 0,
       avgReplyTimeMinutes: t.avgReplyTimeMinutes ?? 0,
+      paymentBankName: t.paymentBankName || '',
+      paymentAccountName: t.paymentAccountName || '',
+      paymentAccountNumber: t.paymentAccountNumber || '',
     },
   }
 }
@@ -97,6 +100,9 @@ export async function updateTherapistProfileForUser(userId, body) {
     const badges = Array.isArray(body.verificationBadges) ? body.verificationBadges : []
     tset.verificationBadges = badges.filter(b => ['PMDS', 'BOARD_CERTIFIED', 'LICENSED'].includes(String(b)))
   }
+  if (body.paymentBankName !== undefined) tset.paymentBankName = String(body.paymentBankName).trim().slice(0, 100)
+  if (body.paymentAccountName !== undefined) tset.paymentAccountName = String(body.paymentAccountName).trim().slice(0, 100)
+  if (body.paymentAccountNumber !== undefined) tset.paymentAccountNumber = String(body.paymentAccountNumber).trim().slice(0, 100)
 
   await Therapist.findOneAndUpdate({ userId }, { $set: tset }, { upsert: false })
 

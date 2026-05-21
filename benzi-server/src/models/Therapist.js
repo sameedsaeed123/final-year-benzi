@@ -8,7 +8,12 @@ const therapistSchema = new mongoose.Schema(
     avgReplyTimeMinutes: { type: Number, default: 0 },
     avgRating: { type: Number, default: 0 },
     reviewCount: { type: Number, default: 0 },
-    onboardingComplete: { type: Boolean, default: true },
+    onboardingComplete: { type: Boolean, default: false },
+    university: { type: String, default: '', trim: true },
+    degreeUrl: { type: String, default: '', trim: true },
+    experienceLetterUrl: { type: String, default: '', trim: true },
+    cnicUrl: { type: String, default: '', trim: true },
+    verificationStatus: { type: String, enum: ['None', 'Pending', 'Approved', 'Rejected'], default: 'None' },
     /** Public directory + profile (PK seed / therapist-editable) */
     city: { type: String, default: 'Lahore', trim: true },
     profileImageUrl: { type: String, default: '', trim: true },
@@ -21,11 +26,20 @@ const therapistSchema = new mongoose.Schema(
     /** Verification badge - therapist can display their PMDS/credentials */
     pmdsVerified: { type: Boolean, default: false },
     verificationBadges: { type: [String], default: [], enum: ['PMDS', 'BOARD_CERTIFIED', 'LICENSED'] },
-    /** Which appointment locations this therapist offers (codes). Labels are optional overrides. */
     availableLocations: { type: [String], default: ['online'], enum: ['online', 'office', 'clinic'] },
     availableLocationLabels: { type: mongoose.Schema.Types.Mixed, default: {} },
+    paymentBankName: { type: String, default: '', trim: true },
+    paymentAccountName: { type: String, default: '', trim: true },
+    paymentAccountNumber: { type: String, default: '', trim: true },
     /** Weekly slots: { mon: [{ start: '09:00', end: '12:00' }], ... } — validated loosely in service */
     weeklyAvailability: { type: mongoose.Schema.Types.Mixed, default: {} },
+
+    /** Google Calendar OAuth (per-therapist) */
+    googleCalendar: {
+      refreshToken: { type: String, default: '', select: false },
+      scope: { type: String, default: '' },
+      connectedAt: { type: Date, default: null },
+    },
   },
   { timestamps: true }
 )

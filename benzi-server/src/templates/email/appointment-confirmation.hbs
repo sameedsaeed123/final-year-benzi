@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Appointment Booking Confirmed</title>
+  <style>
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+    body { margin: 0; padding: 0; width: 100% !important; height: 100% !important; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #F8F9FA; color: #2C3E50; }
+    .email-container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+    .header { background: linear-gradient(135deg, #4A90E2 0%, #50E3C2 100%); padding: 30px 20px; text-align: center; }
+    .logo { font-size: 32px; font-weight: bold; color: #ffffff; text-decoration: none; letter-spacing: 2px; }
+    .content { padding: 40px 30px; }
+    .greeting { font-size: 24px; font-weight: 600; color: #2C3E50; margin: 0 0 20px 0; }
+    .body-text { font-size: 16px; line-height: 1.6; color: #2C3E50; margin: 0 0 20px 0; }
+    .info-box { background-color: #E8F4FD; border-left: 4px solid #4A90E2; padding: 15px 20px; margin: 20px 0; border-radius: 4px; }
+    .info-box p { margin: 5px 0; font-size: 14px; color: #2C3E50; }
+    .info-box strong { color: #4A90E2; }
+    .cta-button { display: inline-block; padding: 14px 32px; background-color: #4A90E2; color: #ffffff !important; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600; margin: 20px 0; }
+    .cta-button:hover { background-color: #3A7BC8; }
+    .footer { background-color: #2C3E50; padding: 30px 20px; text-align: center; color: #ffffff; }
+    .footer-text { font-size: 14px; margin: 5px 0; color: #ffffff; }
+    .footer-link { color: #50E3C2; text-decoration: none; margin: 0 10px; }
+    .footer-link:hover { text-decoration: underline; }
+    @media only screen and (max-width: 600px) {
+      .email-container { width: 100% !important; }
+      .content { padding: 30px 20px !important; }
+      .greeting { font-size: 20px !important; }
+      .body-text { font-size: 15px !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="header">
+      <div class="logo">BENZI</div>
+    </div>
+    
+    <div class="content">
+      <h1 class="greeting">Hi {{recipientName}},</h1>
+      
+      <p class="body-text">
+        Your appointment booking has been submitted successfully! Here are the details of your booking:
+      </p>
+      
+      <div class="info-box">
+        <p><strong>📅 Date:</strong> {{appointmentDate}}</p>
+        <p><strong>🕐 Time:</strong> {{appointmentTime}}</p>
+        <p><strong>👤 Therapist:</strong> {{therapistName}}</p>
+        <p><strong>📍 Location:</strong> {{location}}</p>
+        {{#if meetLink}}
+        <p><strong>🎥 Video Link:</strong> <a href="{{meetLink}}">{{meetLink}}</a></p>
+        {{/if}}
+        {{#if anonymousMeet}}
+        <p style="margin-top:12px;font-size:13px;"><strong>Anonymous video session:</strong> Use the BENZI link below (not Google Meet). <strong>Microphone only</strong> — camera is disabled. The therapist only sees you as &quot;Anonymous&quot;, not your real name.</p>
+        {{/if}}
+        <p><strong>💵 Price:</strong> Rs. {{price}}</p>
+        <p><strong>💳 Payment Method:</strong> {{paymentMethod}}</p>
+        <p><strong>🔔 Status:</strong> {{status}}</p>
+      </div>
+      
+      <p class="body-text">
+        If your payment method is online, your booking status will remain <strong>PENDING</strong> until the therapist verifies your payment receipt screenshot. Once verified, you will receive another confirmation email.
+      </p>
+      
+      {{#if appointmentUrl}}
+      <div style="text-align: center;">
+        <a href="{{appointmentUrl}}" class="cta-button">View Appointment</a>
+      </div>
+      {{/if}}
+      
+      <p class="body-text">
+        Thank you for choosing BENZI for your mental health support.
+      </p>
+      
+      <p class="body-text">
+        Best regards,<br>
+        <strong>The BENZI Team</strong>
+      </p>
+    </div>
+    
+    <div class="footer">
+      <p class="footer-text"><strong>BENZI</strong> Mental Health Platform</p>
+      <p class="footer-text">&copy; {{currentYear}} BENZI. All rights reserved.</p>
+      <p class="footer-text">
+        <a href="{{preferencesUrl}}" class="footer-link">Email Preferences</a>
+        <a href="mailto:support@benzi.com" class="footer-link">Support</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>

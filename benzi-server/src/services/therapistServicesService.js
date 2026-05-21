@@ -1,4 +1,5 @@
 import { Service } from '../models/Service.js'
+import { User } from '../models/User.js'
 
 function toDto(doc) {
   return {
@@ -56,4 +57,15 @@ export async function deleteTherapistService(therapistUserId, serviceId) {
     throw err
   }
   return { ok: true }
+}
+
+export async function listActiveTherapistServices(therapistUserId) {
+  const user = await User.findById(therapistUserId).select('role').lean()
+  if (!user || user.role !== 'therapist') {
+    const err = new Error('Therapist not found')
+    err.statusCode = 404
+    throw err
+  }
+  const rows = await Service.find({ therapistUserId, isActive: true }).sort({ createdAt: -1 }).lean()
+  return rows.map(toDto)
 }

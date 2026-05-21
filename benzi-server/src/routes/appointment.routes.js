@@ -7,6 +7,9 @@ import {
   patientCreateAppointment,
   therapistPatchAppointment,
   therapistAvailabilitySlots,
+  getAppointmentById,
+  therapistCalendarDates,
+  regenerateAppointmentVideo,
 } from '../controllers/appointmentController.js'
 
 const router = Router()
@@ -29,6 +32,9 @@ router.post(
 router.get('/availability/:therapistUserId', verifyJWT, requireRoles('patient'), therapistAvailabilitySlots)
 router.get('/patient/me', verifyJWT, requireRoles('patient'), patientAppointments)
 router.get('/therapist/me', verifyJWT, requireRoles('therapist'), therapistAppointments)
+router.get('/therapist/calendar', verifyJWT, requireRoles('therapist'), therapistCalendarDates)
+router.post('/:id/regenerate-video', verifyJWT, requireRoles('patient', 'therapist'), regenerateAppointmentVideo)
+router.get('/:id', verifyJWT, requireRoles('patient', 'therapist'), getAppointmentById)
 router.patch('/:id', verifyJWT, requireRoles('therapist'), therapistPatchAppointment)
 
 export default router

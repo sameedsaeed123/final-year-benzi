@@ -1,11 +1,16 @@
 import { sendSuccess, sendError } from '../utils/responseUtils.js'
-import { listAppointmentsForPatient, listAppointmentsForTherapist, getTherapistAvailabilitySlots } from '../services/appointmentService.js'
+import { listAppointmentsForPatient, listAppointmentsForTherapist, getTherapistAvailabilitySlots, getAppointmentDetail, getTherapistAppointmentDates } from '../services/appointmentService.js'
+import { processAppointmentCompletions } from '../services/appointmentCompletionService.js'
 import { createAppointmentByPatient, updateAppointmentByTherapist } from '../services/appointmentMutationService.js'
+import { Appointment } from '../models/Appointment.js'
+import { ensureMeetLinkForAppointment } from '../services/googleCalendarService.js'
+import mongoose from 'mongoose'
 import { createAppointmentSchema, patchAppointmentSchema, availabilityQuerySchema } from '../validators/appointmentValidators.js'
 import { getLinkedTherapistForPatient } from '../services/patientService.js'
 
 export async function patientAppointments(req, res, next) {
   try {
+    await processAppointmentCompletions()
     const rows = await listAppointmentsForPatient(req.user.id)
     return sendSuccess(res, { appointments: rows, total: rows.length }, 'OK', 200)
   } catch (e) {
@@ -15,6 +20,7 @@ export async function patientAppointments(req, res, next) {
 
 export async function therapistAppointments(req, res, next) {
   try {
+    await processAppointmentCompletions()
     const rows = await listAppointmentsForTherapist(req.user.id)
     return sendSuccess(res, { appointments: rows, total: rows.length }, 'OK', 200)
   } catch (e) {
@@ -87,6 +93,71 @@ export async function therapistAvailabilitySlots(req, res, next) {
       date: value.date,
       durationMinutes: value.durationMinutes || 60,
     })
+    return sendSuccess(res, data, 'OK', 200)
+  } catch (e) {
+    if (e.statusCode) return sendError(res, e.message, e.statusCode)
+    next(e)
+  }
+}
+
+export async function regenerateAppointmentVideo(req, res, next) {
+  try {
+    const appointmentId = req.params.id
+    let doc = null
+    if (mongoose.Types.ObjectId.isValid(appointmentId)) {
+      doc = await Appointment.findById(appointmentId)
+    } else {
+      const all = await Appointment.find({}).select('_id')
+      const match = all.find((a) => String(a._id).slice(-8).toUpperCase() === appointmentId.toUpperCase())
+      if (match) doc = await Appointment.findById(match._id)
+    }
+    if (!doc) return sendError(res, 'Appointment not found', 404)
+    if (req.user.role === 'patient' && String(doc.patientUserId) !== String(req.user.id)) {
+      return sendError(res, 'Forbidden', 403)
+    }
+    if (req.user.role === 'therapist' && String(doc.therapistUserId) !== String(req.user.id)) {
+      return sendError(res, 'Forbidden', 403)
+    }
+    if (doc.location !== 'online') return sendError(res, 'Not an online appointment', 400)
+
+    doc.meetLink = ''
+    doc.therapistMeetLink = ''
+    await ensureMeetLinkForAppointment(doc)
+
+    const isTherapist = req.user.role === 'therapist'
+    const isAnon = Boolean(doc.bookedAsAnonymous)
+    return sendSuccess(
+      res,
+      {
+        meetLink: isTherapist && isAnon ? doc.therapistMeetLink || doc.meetLink || '' : doc.meetLink || '',
+        therapistMeetLink: doc.therapistMeetLink || '',
+        videoProvider: doc.videoProvider || 'google',
+        bookedAsAnonymous: isAnon,
+      },
+      'OK',
+      200
+    )
+  } catch (e) {
+    if (e.statusCode) return sendError(res, e.message, e.statusCode)
+    next(e)
+  }
+}
+
+export async function getAppointmentById(req, res, next) {
+  try {
+    await processAppointmentCompletions()
+    const data = await getAppointmentDetail(req.params.id, req.user.id, req.user.role)
+    return sendSuccess(res, data, 'OK', 200)
+  } catch (e) {
+    if (e.statusCode) return sendError(res, e.message, e.statusCode)
+    next(e)
+  }
+}
+
+export async function therapistCalendarDates(req, res, next) {
+  try {
+    const { year, month } = req.query
+    const data = await getTherapistAppointmentDates(req.user.id, Number(year), Number(month))
     return sendSuccess(res, data, 'OK', 200)
   } catch (e) {
     if (e.statusCode) return sendError(res, e.message, e.statusCode)
