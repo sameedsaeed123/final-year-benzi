@@ -1,5 +1,8 @@
 # BENZI — Ollama on your Dell laptop (quick start)
 
+> **New machine?** Full install (MongoDB, Node, zip, admin, seeds): **[DELL_MACHINE_SETUP.md](DELL_MACHINE_SETUP.md)**  
+> Requirements only: **[REQUIREMENTS.md](REQUIREMENTS.md)**
+
 ## Is Ollama required?
 
 - **For FYP demo / local ML:** Yes — install Ollama and set `LLM_PROVIDER=ollama`.
