@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Bell, CheckCircle, ChevronRight, MessageCircle, Moon, ShieldCheck, Sparkles, Target } from 'lucide-react'
+import { AlertTriangle, ArrowRight, Bell, CheckCircle, ChevronRight, MessageCircle, Moon, ShieldCheck, Sparkles, Target } from 'lucide-react'
 import PatientSidebar from '../../components/PatientSidebar'
 import { api } from '../../lib/api.js'
 import { sanitizeAiText } from '../../lib/textSanitize.js'
+import { useSocket } from '../../context/SocketContext.jsx'
 
 const iconByTitle = (title) => {
   const t = String(title || '').toLowerCase()
@@ -27,7 +28,9 @@ export default function PatientGoalsPage() {
   const [submitting, setSubmitting] = useState(false)
   const [submitMsg, setSubmitMsg] = useState('')
   const [submitError, setSubmitError] = useState('')
+  const [crisisActive, setCrisisActive] = useState(false)
   const previewTimer = useRef(null)
+  const { subscribeActivity } = useSocket() || {}
 
   const insightDate = useMemo(
     () => new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: '2-digit' }),
@@ -39,42 +42,48 @@ export default function PatientGoalsPage() {
     try {
       const q = draft ? `?draft=${encodeURIComponent(draft)}` : ''
       const json = await api(`/ai/goals/insight/me${q}`, { method: 'GET', silent: true })
-      setInsight(json.data?.insight || '')
-      setInsightTips(json.data?.tips || [])
+      const data = json.data || {}
+      setCrisisActive(Boolean(data.isCrisis))
+      setInsight(data.insight || '')
+      setInsightTips(data.tips || [])
+      if (data.isCrisis) setPreviewRecs([])
     } catch {
       setInsight('')
       setInsightTips([])
+      setCrisisActive(false)
     } finally {
       setInsightLoading(false)
     }
   }, [])
 
-  useEffect(() => {
-    let cancelled = false
-    const load = async () => {
-      try {
-        const [goalsJson, analyticsJson] = await Promise.all([
-          api('/ai/goals/me', { method: 'GET' }),
-          api('/ai/analytics/me', { method: 'GET' }),
-        ])
-        if (!cancelled) {
-          const g = goalsJson.data?.goals || []
-          setGoals(g)
-          setAnalytics(analyticsJson.data || null)
-          if (g.length && !selectedGoalId) setSelectedGoalId(String(g[0]._id || g[0].id))
-        }
-      } catch {
-        if (!cancelled) {
-          setGoals([])
-          setAnalytics(null)
-        }
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
+  const loadGoalsAndAnalytics = useCallback(async () => {
+    try {
+      const [goalsJson, analyticsJson] = await Promise.all([
+        api('/ai/goals/me', { method: 'GET', silent: true }),
+        api('/ai/analytics/me', { method: 'GET', silent: true }),
+      ])
+      const g = goalsJson.data?.goals || []
+      setGoals(g)
+      setAnalytics(analyticsJson.data || null)
+      if (g.length) setSelectedGoalId((prev) => prev || String(g[0]._id || g[0].id))
+    } catch {
+      setGoals([])
+      setAnalytics(null)
+    } finally {
+      setLoading(false)
     }
-    void load()
-    return () => { cancelled = true }
   }, [])
+
+  useEffect(() => {
+    void loadGoalsAndAnalytics()
+  }, [loadGoalsAndAnalytics])
+
+  useEffect(() => {
+    if (!subscribeActivity) return
+    return subscribeActivity(() => {
+      void loadGoalsAndAnalytics()
+    })
+  }, [subscribeActivity, loadGoalsAndAnalytics])
 
   useEffect(() => {
     void loadInsight('')
@@ -85,19 +94,35 @@ export default function PatientGoalsPage() {
     const draft = goalDraft.trim()
     if (draft.length < 3) {
       setPreviewRecs([])
+      setCrisisActive(false)
       return
     }
     previewTimer.current = setTimeout(() => {
       setPreviewLoading(true)
-      api('/ai/goals/preview/me', {
-        method: 'POST',
-        body: JSON.stringify({ draft }),
-        silent: true,
-      })
-        .then((json) => setPreviewRecs(json.data?.recommendations || []))
-        .catch(() => setPreviewRecs([]))
-        .finally(() => setPreviewLoading(false))
-      void loadInsight(draft)
+      setInsightLoading(true)
+      Promise.all([
+        api(`/ai/goals/insight/me?draft=${encodeURIComponent(draft)}`, { method: 'GET', silent: true }),
+        api('/ai/goals/preview/me', {
+          method: 'POST',
+          body: JSON.stringify({ draft }),
+          silent: true,
+        }),
+      ])
+        .then(([insightJson, previewJson]) => {
+          const isCrisis = Boolean(insightJson.data?.isCrisis || previewJson.data?.isCrisis)
+          setCrisisActive(isCrisis)
+          setInsight(insightJson.data?.insight || '')
+          setInsightTips(insightJson.data?.tips || [])
+          setPreviewRecs(isCrisis ? [] : previewJson.data?.recommendations || [])
+        })
+        .catch(() => {
+          setPreviewRecs([])
+          setCrisisActive(false)
+        })
+        .finally(() => {
+          setPreviewLoading(false)
+          setInsightLoading(false)
+        })
     }, 700)
     return () => {
       if (previewTimer.current) clearTimeout(previewTimer.current)
@@ -118,11 +143,23 @@ export default function PatientGoalsPage() {
         method: 'POST',
         body: JSON.stringify({ title, description: title }),
       })
-      setSubmitMsg(json.data?.message || 'Goal sent to your therapist.')
+      if (json.data?.crisis) {
+        setCrisisActive(true)
+        setSubmitMsg(json.data?.message || 'Your therapist has been notified.')
+        setPreviewRecs([])
+        setInsight(json.data?.message || '')
+        setInsightTips([
+          'If you are in immediate danger, call emergency services now.',
+          'Your therapist has been alerted.',
+        ])
+      } else {
+        setSubmitMsg(json.data?.message || 'Goal sent to your therapist.')
+        setCrisisActive(false)
+      }
       setGoalDraft('')
       const goalsJson = await api('/ai/goals/me', { method: 'GET', silent: true })
       setGoals(goalsJson.data?.goals || [])
-      void loadInsight('')
+      if (!json.data?.crisis) void loadInsight('')
     } catch (e) {
       setSubmitError(e.message || 'Could not submit goal.')
     } finally {
@@ -213,12 +250,30 @@ export default function PatientGoalsPage() {
                           }`}>
                           <Icon size={18} />
                         </div>
-                        <span className="text-[10px] uppercase font-semibold text-[#7d8b7d]">{goal.status}</span>
+                        <span className={`text-[10px] uppercase font-semibold ${
+                          goal.status === 'rejected' ? 'text-[#b42318]' : 'text-[#7d8b7d]'
+                        }`}>
+                          {goal.status === 'rejected' ? 'declined' : goal.status}
+                        </span>
                       </div>
                       <h3 className="mt-6 text-[15px] font-semibold text-[#0f3a2b]">{sanitizeAiText(goal.title)}</h3>
                       <p className="mt-3 text-sm text-[#5f6c5d]">{sanitizeAiText(goal.description) || 'Assigned by your therapist'}</p>
-                      {goal.submittedBy === 'patient' && (
-                        <p className="mt-2 text-[11px] text-[#7a5b4b] font-medium">Sent to therapist</p>
+                      {goal.isCrisisAlert && (
+                        <p className="mt-2 text-[11px] text-[#b42318] font-semibold flex items-center gap-1">
+                          <AlertTriangle size={12} /> Safety alert — therapist notified
+                        </p>
+                      )}
+                      {goal.status === 'rejected' && (
+                        <p className="mt-2 text-[11px] text-[#b42318] font-medium">
+                          Your therapist declined this goal
+                          {goal.rejectionNote ? `: ${sanitizeAiText(goal.rejectionNote)}` : ''}
+                        </p>
+                      )}
+                      {goal.submittedBy === 'patient' && !goal.isCrisisAlert && goal.status === 'pending' && (
+                        <p className="mt-2 text-[11px] text-[#7a5b4b] font-medium">Awaiting therapist review</p>
+                      )}
+                      {goal.submittedBy === 'patient' && goal.status === 'in-progress' && (
+                        <p className="mt-2 text-[11px] text-[#1f5f4a] font-medium">Approved by therapist</p>
                       )}
                       {goal.aiRecommended && goal.submittedBy !== 'patient' && (
                         <p className="mt-2 text-[11px] text-brand font-medium">AI recommended</p>
@@ -228,7 +283,7 @@ export default function PatientGoalsPage() {
                 })}
               </div>
 
-              {selectedGoal && selectedGoal.status !== 'completed' && (
+              {selectedGoal && selectedGoal.status !== 'completed' && selectedGoal.status !== 'rejected' && (
                 <div className="mt-6 flex flex-wrap gap-3">
                   {selectedGoal.status === 'pending' && (
                     <button
@@ -351,12 +406,27 @@ export default function PatientGoalsPage() {
                     type="button"
                     disabled={submitting || !goalDraft.trim()}
                     onClick={() => void handleSubmitGoal()}
-                    className="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#1b513a] disabled:opacity-50"
+                    className={`rounded-full px-5 py-2 text-sm font-semibold text-white transition disabled:opacity-50 ${
+                      crisisActive ? 'bg-[#b42318] hover:bg-[#9a1f14]' : 'bg-brand hover:bg-[#1b513a]'
+                    }`}
                   >
-                    {submitting ? 'Sending…' : 'Submit to therapist'}
+                    {submitting ? 'Sending…' : crisisActive ? 'Notify therapist (safety)' : 'Submit to therapist'}
                   </button>
                 </div>
-                {submitMsg && <p className="mt-2 text-[12px] font-medium text-[#1f5f4a]">{submitMsg}</p>}
+                {crisisActive && (
+                  <div className="mt-3 rounded-2xl border border-[#b42318]/40 bg-[#fef2f2] p-4 flex gap-3">
+                    <AlertTriangle className="text-[#b42318] shrink-0" size={22} />
+                    <div className="text-sm text-[#7a1f18] leading-relaxed">
+                      <p className="font-semibold">We're here for you</p>
+                      <p className="mt-1">This sounds like a safety concern, not a therapy goal. Your therapist will be alerted. If you're in immediate danger, call emergency services now.</p>
+                    </div>
+                  </div>
+                )}
+                {submitMsg && (
+                  <p className={`mt-2 text-[12px] font-medium ${crisisActive ? 'text-[#b42318]' : 'text-[#1f5f4a]'}`}>
+                    {submitMsg}
+                  </p>
+                )}
                 {submitError && <p className="mt-2 text-[12px] text-red-700">{submitError}</p>}
 
                 <textarea
@@ -367,7 +437,7 @@ export default function PatientGoalsPage() {
                   className="mt-3 w-full rounded-[24px] border border-black/10 bg-[#f8f8f3] p-5 text-sm text-[#2e3f34] outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
                 />
 
-                {(previewLoading || previewRecs.length > 0) && (
+                {!crisisActive && (previewLoading || previewRecs.length > 0) && (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {previewLoading && <span className="text-[11px] text-[#7d8b7d]">Updating suggestions…</span>}
                     {previewRecs.map((rec, i) => (
@@ -388,12 +458,18 @@ export default function PatientGoalsPage() {
                     <p className="text-sm uppercase tracking-[0.1em] text-[#7d8b7d]">Insights & Recommendations</p>
                     <span className="text-[11px] text-[#7d8b7d]">{insightDate}</span>
                   </div>
-                  <div className="mt-2 rounded-3xl bg-white p-4 shadow-sm min-h-[80px]">
+                  <div
+                    className={`mt-2 rounded-3xl p-4 shadow-sm min-h-[80px] ${
+                      crisisActive ? 'bg-[#fef2f2] border border-[#b42318]/30' : 'bg-white'
+                    }`}
+                  >
                     {insightLoading && !insight && (
                       <p className="text-sm text-[#6b7b6a]">Building insights from your reports & chat…</p>
                     )}
                     {!insightLoading && insight && (
-                      <p className="text-sm text-[#2e3f34] leading-relaxed">{insight}</p>
+                      <p className={`text-sm leading-relaxed ${crisisActive ? 'text-[#7a1f18]' : 'text-[#2e3f34]'}`}>
+                        {insight}
+                      </p>
                     )}
                     {!insightLoading && !insight && (
                       <p className="text-sm text-[#6b7b6a]">

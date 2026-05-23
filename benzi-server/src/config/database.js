@@ -49,8 +49,15 @@ export async function connectDB(uri) {
 
   try {
     await mongoose.connect(u, opts)
+    if (process.env.NODE_ENV !== 'production') {
+      const safe = u.replace(/:([^:@/]+)@/, ':***@')
+      console.log(`[MongoDB] Connected (${safe})`)
+    }
   } catch (e) {
-    console.error('[MongoDB] Connection failed. Check URI, port (Mongo default is 27017), authSource, and network/firewall.')
+    const safe = u.replace(/:([^:@/]+)@/, ':***@')
+    console.error('[MongoDB] Connection failed:', e.message)
+    console.error('[MongoDB] URI used (password hidden):', safe)
+    console.error('[MongoDB] Tip: use ...HOST:PORT/benzi?options (database name before ?), authSource=admin for user root, and allow your IP on the server firewall.')
     throw e
   }
   connected = true

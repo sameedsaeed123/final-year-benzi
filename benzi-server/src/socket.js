@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken'
 import { env } from './config/environment.js'
 import { Message } from './models/Message.js'
 import { Appointment } from './models/Appointment.js'
+import { setSocketServer, userRoom, emitActivityNotification } from './services/realtimeService.js'
 
 // roomId for a therapist-patient pair
 function roomId(therapistUserId, patientUserId) {
@@ -50,6 +51,7 @@ export function initSocket(httpServer) {
 
   io.on('connection', (socket) => {
     const { id: userId, role } = socket.user
+    socket.join(userRoom(userId))
 
     // Join a conversation room
     socket.on('join_room', async ({ therapistUserId, patientUserId }) => {
@@ -96,6 +98,20 @@ export function initSocket(httpServer) {
 
         const room = roomId(therapistUserId, patientUserId)
         io.to(room).emit('new_message', payload)
+
+        const recipientId = role === 'therapist' ? patientUserId : therapistUserId
+        emitActivityNotification({
+          patientUserId,
+          therapistUserId,
+          notifyUserIds: [recipientId],
+          type: 'chat_message',
+          title: 'New message',
+          message:
+            role === 'therapist'
+              ? 'Your therapist sent you a message'
+              : 'Your patient sent a new message',
+          data: { messageId: payload.id, preview: payload.text?.slice(0, 80) },
+        })
       } catch (e) {
         socket.emit('error', { message: 'Failed to send message' })
       }
@@ -125,5 +141,6 @@ export function initSocket(httpServer) {
     })
   })
 
+  setSocketServer(io)
   return io
 }

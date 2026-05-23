@@ -1,5 +1,6 @@
 import { Patient } from '../models/Patient.js'
 import { Therapist } from '../models/Therapist.js'
+import { ensureTherapistDefaultPlan } from './subscriptionLimitsService.js'
 
 /**
  * Ensures a Patient or Therapist extension doc exists for this user (upsert).
@@ -36,5 +37,6 @@ export async function ensureProfilesAfterAuth(user) {
       },
       { upsert: true }
     )
+    await ensureTherapistDefaultPlan(user._id)
   }
 }

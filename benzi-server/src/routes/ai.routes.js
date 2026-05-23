@@ -14,9 +14,13 @@ import {
   submitPatientGoalProposal,
   getPatientGoalInsightMe,
   previewPatientGoalRecommendations,
+  previewTherapistGoalRecommendations,
+  getLlmHealth,
 } from '../controllers/aiController.js'
 
 const router = Router()
+
+router.get('/health', getLlmHealth)
 
 router.post('/chat', verifyJWT, requireRoles('patient'), patientAiChat)
 router.get('/chat/history', verifyJWT, requireRoles('patient'), getAiChatHistory)
@@ -47,6 +51,12 @@ router.post('/goals/assign', verifyJWT, requireRoles('therapist'), assignGoal)
 router.post('/goals/submit-proposal', verifyJWT, requireRoles('patient'), submitPatientGoalProposal)
 router.get('/goals/insight/me', verifyJWT, requireRoles('patient'), getPatientGoalInsightMe)
 router.post('/goals/preview/me', verifyJWT, requireRoles('patient'), previewPatientGoalRecommendations)
+router.post(
+  '/goals/preview/patient/:patientUserId',
+  verifyJWT,
+  requireRoles('therapist'),
+  previewTherapistGoalRecommendations
+)
 router.get('/goals/me', verifyJWT, requireRoles('patient'), getPatientGoals)
 router.get('/goals/patient/:patientUserId', verifyJWT, requireRoles('therapist'), getPatientGoals)
 router.patch('/goals/:goalId/status', verifyJWT, updateGoalStatus)

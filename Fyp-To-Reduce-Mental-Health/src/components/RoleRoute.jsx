@@ -11,7 +11,13 @@ export default function RoleRoute({ children, allow }) {
   const { user, loading, patientLinked } = useAuth()
   const location = useLocation()
 
-  if (loading) return null
+  if (loading) {
+    return (
+      <div className="min-h-[40vh] flex items-center justify-center bg-cream">
+        <p className="text-sm text-[#7d8b7d]">Loading…</p>
+      </div>
+    )
+  }
   if (user?.role === 'patient' && patientLinked === null) return null
 
   if (!user) {

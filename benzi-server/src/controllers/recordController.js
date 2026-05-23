@@ -1,4 +1,6 @@
 import { sendSuccess, sendError } from '../utils/responseUtils.js'
+import { syncStatsAndNotify } from '../services/aiActivityService.js'
+import { Record } from '../models/Record.js'
 import {
   listRecordsForPatient,
   listRecordsForTherapist,
@@ -56,6 +58,19 @@ export async function uploadRecordHandler(req, res, next) {
       description: req.body.description || '',
       type: req.body.type || 'patient_upload',
     })
+
+    const therapistUserId = req.user.role === 'therapist' ? req.user.id : null
+    void syncStatsAndNotify(patientUserId, {
+      therapistUserId,
+      type: 'record_uploaded',
+      title: 'New clinical document',
+      message:
+        req.user.role === 'patient'
+          ? 'Patient uploaded a new report'
+          : 'A new report was added to the patient file',
+      data: { recordId: result?.id, title: result?.title },
+    }).catch(() => {})
+
     return sendSuccess(res, result, 'Uploaded', 201)
   } catch (e) {
     if (e.statusCode) return sendError(res, e.message, e.statusCode)
@@ -70,6 +85,16 @@ export async function therapistUpdateReview(req, res, next) {
     // route is /therapist/:id/review
     const recordId = req.params.id
     const result = await updateRecordReview(recordId, req.user.id, { reviewStatus, therapistNotes })
+    const record = await Record.findById(recordId).select('patientUserId title').lean()
+    if (record?.patientUserId) {
+      void syncStatsAndNotify(record.patientUserId, {
+        therapistUserId: req.user.id,
+        type: 'record_reviewed',
+        title: 'Report reviewed',
+        message: `Therapist updated review on "${record.title || 'report'}"`,
+        data: { recordId, reviewStatus },
+      }).catch(() => {})
+    }
     return sendSuccess(res, result, 'Updated', 200)
   } catch (e) {
     if (e.statusCode) return sendError(res, e.message, e.statusCode)

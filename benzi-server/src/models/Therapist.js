@@ -34,6 +34,11 @@ const therapistSchema = new mongoose.Schema(
     /** Weekly slots: { mon: [{ start: '09:00', end: '12:00' }], ... } — validated loosely in service */
     weeklyAvailability: { type: mongoose.Schema.Types.Mixed, default: {} },
 
+    /** Active subscription (denormalized from TherapistSubscription) */
+    subscriptionPlanSlug: { type: String, default: 'try-free', trim: true },
+    subscriptionStatus: { type: String, default: 'active', trim: true },
+    subscriptionExpiresAt: { type: Date, default: null },
+
     /** Google Calendar OAuth (per-therapist) */
     googleCalendar: {
       refreshToken: { type: String, default: '', select: false },

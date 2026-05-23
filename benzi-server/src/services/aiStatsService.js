@@ -68,12 +68,13 @@ export async function buildAiAnalytics(patientUserId) {
     AiMessage.find({ patientUserId, sender: 'patient' }).lean(),
   ])
 
-  const completedGoals = goals.filter((g) => g.status === 'completed').length
-  const totalGoals = goals.length || 1
+  const activeGoals = goals.filter((g) => g.status !== 'rejected')
+  const completedGoals = activeGoals.filter((g) => g.status === 'completed').length
+  const totalGoals = activeGoals.length || 1
   const goalPct = clampPct((completedGoals / totalGoals) * 100)
 
-  const inProgress = goals.filter((g) => g.status === 'in-progress').length
-  const pending = goals.filter((g) => g.status === 'pending').length
+  const inProgress = activeGoals.filter((g) => g.status === 'in-progress').length
+  const pending = activeGoals.filter((g) => g.status === 'pending').length
 
   const avgMood =
     moodLogs.length > 0

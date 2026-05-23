@@ -160,6 +160,7 @@ export const templateIds = {
   TICKET_CREATED: 'ticket-created',
   TICKET_REPLY: 'ticket-reply',
   TICKET_RESOLVED: 'ticket-resolved',
+  CRISIS_ALERT: 'crisis-alert',
 };
 
 /**

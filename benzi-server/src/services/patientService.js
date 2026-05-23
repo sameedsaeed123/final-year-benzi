@@ -38,7 +38,18 @@ export async function getLinkedTherapistForPatient(userId) {
 }
 
 export async function linkPatientToTherapistIfEmpty(patientUserId, therapistUserId) {
-  // First try to update existing patient record if therapist not yet assigned
+  const existing = await Patient.findOne({ userId: patientUserId })
+    .select('assignedTherapistUserId')
+    .lean()
+  const isNewLink =
+    !existing?.assignedTherapistUserId ||
+    String(existing.assignedTherapistUserId) !== String(therapistUserId)
+
+  if (isNewLink && !existing?.assignedTherapistUserId) {
+    const { assertCanAddPatient } = await import('./subscriptionLimitsService.js')
+    await assertCanAddPatient(therapistUserId)
+  }
+
   const result = await Patient.updateOne(
     {
       userId: patientUserId,

@@ -3,6 +3,7 @@ import { verifyJWT, requireRoles } from '../middleware/verifyJWT.js'
 import {
   therapistDashboard,
   therapistDirectory,
+  therapistPublicDetail,
   therapistProfileMe,
   therapistProfilePatch,
   therapistAvailabilityMe,
@@ -21,6 +22,7 @@ import {
 const router = Router()
 
 router.get('/directory', therapistDirectory)
+router.get('/detail/:therapistUserId', therapistPublicDetail)
 router.get('/profile/me', verifyJWT, requireRoles('therapist'), therapistProfileMe)
 router.patch('/profile/me', verifyJWT, requireRoles('therapist'), therapistProfilePatch)
 router.get('/dashboard/me', verifyJWT, requireRoles('therapist'), therapistDashboard)

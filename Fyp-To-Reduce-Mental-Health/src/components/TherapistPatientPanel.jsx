@@ -1,36 +1,42 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
+  AlertTriangle,
   BarChart3,
   CheckCircle,
   MessageCircle,
   Target,
   X,
+  XCircle,
 } from 'lucide-react'
 import { api } from '../lib/api.js'
 import { sanitizeAiText } from '../lib/textSanitize.js'
+import { useSocket } from '../context/SocketContext.jsx'
 
 const goalStatusStyle = {
   pending: 'bg-[#f6f1ec] text-[#7a5b4b]',
   'in-progress': 'bg-[#e7f1e8] text-[#1f5f4a]',
   completed: 'bg-[#e8f0fb] text-[#2d5fa6]',
+  rejected: 'bg-[#fef2f2] text-[#b42318]',
 }
 
 export default function TherapistPatientPanel({ client, onClose, onUpdated }) {
   const navigate = useNavigate()
+  const { subscribeActivity } = useSocket() || {}
   const [tab, setTab] = useState('stats')
   const [analytics, setAnalytics] = useState(null)
   const [overview, setOverview] = useState(null)
   const [goals, setGoals] = useState([])
   const [loadingStats, setLoadingStats] = useState(true)
   const [loadingGoals, setLoadingGoals] = useState(true)
-  const [aiRecommendations, setAiRecommendations] = useState([])
-  const [loadingRecs, setLoadingRecs] = useState(false)
+  const [typingRecs, setTypingRecs] = useState([])
+  const [loadingTypingRecs, setLoadingTypingRecs] = useState(false)
   const [goalTitle, setGoalTitle] = useState('')
   const [goalDescription, setGoalDescription] = useState('')
   const [goalPriority, setGoalPriority] = useState('medium')
   const [assigning, setAssigning] = useState(false)
   const [msg, setMsg] = useState('')
+  const previewTimer = useRef(null)
 
   const patientId = client?.id
 
@@ -65,29 +71,54 @@ export default function TherapistPatientPanel({ client, onClose, onUpdated }) {
     }
   }, [patientId])
 
+  const refreshAll = useCallback(async () => {
+    await Promise.all([loadStats(), loadGoals()])
+    onUpdated?.()
+  }, [loadStats, loadGoals, onUpdated])
+
   useEffect(() => {
     void loadStats()
     void loadGoals()
   }, [loadStats, loadGoals])
 
   useEffect(() => {
-    if (!patientId || tab !== 'goals') return
-    let cancelled = false
-    setLoadingRecs(true)
-    api(`/ai/goals/recommend/${patientId}`, { method: 'POST', silent: true })
-      .then((json) => {
-        if (!cancelled) setAiRecommendations(json.data?.recommendations || [])
-      })
-      .catch(() => {
-        if (!cancelled) setAiRecommendations([])
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingRecs(false)
-      })
-    return () => { cancelled = true }
-  }, [patientId, tab])
+    if (!subscribeActivity || !patientId) return
+    return subscribeActivity((payload) => {
+      const pid = payload?.patientUserId
+      if (pid && String(pid) === String(patientId)) {
+        void refreshAll()
+      }
+    })
+  }, [subscribeActivity, patientId, refreshAll])
 
-  const patientSubmitted = goals.filter((g) => g.submittedBy === 'patient')
+  useEffect(() => {
+    if (!patientId || tab !== 'goals') return
+    const draft = `${goalTitle} ${goalDescription}`.trim()
+    if (previewTimer.current) clearTimeout(previewTimer.current)
+    if (draft.length < 2) {
+      setTypingRecs([])
+      return
+    }
+    previewTimer.current = setTimeout(() => {
+      setLoadingTypingRecs(true)
+      api(`/ai/goals/preview/patient/${patientId}`, {
+        method: 'POST',
+        body: JSON.stringify({ draft }),
+        silent: true,
+      })
+        .then((json) => setTypingRecs(json.data?.recommendations || []))
+        .catch(() => setTypingRecs([]))
+        .finally(() => setLoadingTypingRecs(false))
+    }, 550)
+    return () => {
+      if (previewTimer.current) clearTimeout(previewTimer.current)
+    }
+  }, [patientId, tab, goalTitle, goalDescription])
+
+  const patientSubmitted = goals.filter(
+    (g) => g.submittedBy === 'patient' && g.status === 'pending' && !g.crisisFlag && !g.isCrisisAlert
+  )
+  const crisisGoals = goals.filter((g) => g.crisisFlag || g.isCrisisAlert)
 
   const handleAssign = async () => {
     if (!goalTitle.trim()) {
@@ -104,7 +135,7 @@ export default function TherapistPatientPanel({ client, onClose, onUpdated }) {
           title: sanitizeAiText(goalTitle),
           description: sanitizeAiText(goalDescription),
           priority: goalPriority,
-          aiRecommended: aiRecommendations.some(
+          aiRecommended: typingRecs.some(
             (r) => sanitizeAiText(r.title) === sanitizeAiText(goalTitle)
           ),
         }),
@@ -112,8 +143,8 @@ export default function TherapistPatientPanel({ client, onClose, onUpdated }) {
       setMsg('Goal assigned.')
       setGoalTitle('')
       setGoalDescription('')
-      await loadGoals()
-      onUpdated?.()
+      setTypingRecs([])
+      await refreshAll()
     } catch (e) {
       setMsg(e.message || 'Failed to assign.')
     } finally {
@@ -121,16 +152,15 @@ export default function TherapistPatientPanel({ client, onClose, onUpdated }) {
     }
   }
 
-  const handleGoalStatus = async (goalId, status) => {
+  const handleGoalStatus = async (goalId, status, rejectionNote = '') => {
     try {
       await api(`/ai/goals/${goalId}/status`, {
         method: 'PATCH',
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, rejectionNote }),
       })
-      await loadGoals()
-      onUpdated?.()
-    } catch {
-      /* ignore */
+      await refreshAll()
+    } catch (e) {
+      setMsg(e.message || 'Could not update goal.')
     }
   }
 
@@ -140,6 +170,8 @@ export default function TherapistPatientPanel({ client, onClose, onUpdated }) {
     positive: 0,
   }
   const individualStats = analytics?.individualStats || []
+  const wellness = overview?.taskScore ?? analytics?.taskScore ?? 0
+  const goalPct = overview?.progressCenterPct ?? analytics?.progressCenterPct ?? 0
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-sm">
@@ -179,6 +211,11 @@ export default function TherapistPatientPanel({ client, onClose, onUpdated }) {
             >
               <Icon size={16} />
               {label}
+              {id === 'goals' && patientSubmitted.length > 0 && (
+                <span className="h-5 min-w-5 rounded-full bg-[#b42318] text-white text-[10px] flex items-center justify-center px-1">
+                  {patientSubmitted.length}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -186,51 +223,36 @@ export default function TherapistPatientPanel({ client, onClose, onUpdated }) {
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
           {tab === 'stats' && (
             <>
-              {loadingStats && (
-                <p className="text-sm text-[#7d8b7d]">Loading patient stats…</p>
-              )}
+              {loadingStats && <p className="text-sm text-[#7d8b7d]">Loading patient stats…</p>}
               {!loadingStats && (
                 <>
-                  <div className="grid grid-cols-2 gap-3">
-                    <StatCard
-                      label="Wellness"
-                      value={`${overview?.taskScore ?? analytics?.taskScore ?? 0}%`}
-                    />
-                    <StatCard
-                      label="Goal progress"
-                      value={`${overview?.progressCenterPct ?? analytics?.progressCenterPct ?? 0}%`}
-                    />
-                    <StatCard
-                      label="AI mood"
-                      value={(overview?.dominantMood || 'neutral').replace(/^./, (c) => c.toUpperCase())}
-                      capitalize
-                    />
-                    <StatCard
-                      label="BENZI chats"
-                      value={String(overview?.aiMessageCount ?? analytics?.aiMessageCount ?? 0)}
-                    />
+                  <div className="rounded-2xl border border-brand/20 bg-gradient-to-br from-[#e8f3ea] to-white p-4">
+                    <p className="text-[11px] uppercase tracking-wider text-[#1f5f4a] font-semibold mb-3">
+                      At a glance
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <StatCard label="Wellness" value={`${wellness}%`} highlight />
+                      <StatCard label="Goal progress" value={`${goalPct}%`} highlight />
+                      <StatCard
+                        label="AI mood"
+                        value={(overview?.dominantMood || 'neutral').replace(/^./, (c) => c.toUpperCase())}
+                        capitalize
+                      />
+                      <StatCard
+                        label="BENZI chats"
+                        value={String(overview?.aiMessageCount ?? analytics?.aiMessageCount ?? 0)}
+                      />
+                    </div>
+                    <p className="text-[11px] text-[#556b5b] mt-3">
+                      Stats refresh when the patient uses BENZI AI, submits goals, or uploads reports.
+                    </p>
                   </div>
 
                   <div className="rounded-2xl border border-black/10 bg-white p-4">
                     <p className="text-[11px] uppercase tracking-wider text-[#7d8b7d] mb-3">
                       Chat sentiment
                     </p>
-                    <div className="grid grid-cols-3 gap-2 text-center text-sm">
-                      {[
-                        { label: 'Positive', n: sentiment.positive, color: '#1F5F4A' },
-                        { label: 'Neutral', n: sentiment.neutral, color: '#8CA287' },
-                        { label: 'Negative', n: sentiment.negative, color: '#D6E3D6' },
-                      ].map((s) => (
-                        <div key={s.label} className="rounded-xl bg-[#f6f8f3] p-3">
-                          <div
-                            className="mx-auto mb-2 h-2 w-2 rounded-full"
-                            style={{ backgroundColor: s.color }}
-                          />
-                          <p className="font-bold text-[#23382d]">{s.n}</p>
-                          <p className="text-[#7d8b7d] text-[11px]">{s.label}</p>
-                        </div>
-                      ))}
-                    </div>
+                    <SentimentBar sentiment={sentiment} />
                   </div>
 
                   {individualStats.length > 0 && (
@@ -244,9 +266,9 @@ export default function TherapistPatientPanel({ client, onClose, onUpdated }) {
                             <span>{s.label}</span>
                             <span>{s.value}%</span>
                           </div>
-                          <div className="h-2 rounded-full bg-[#e8f2e9] overflow-hidden">
+                          <div className="h-2.5 rounded-full bg-[#e8f2e9] overflow-hidden">
                             <div
-                              className="h-full rounded-full"
+                              className="h-full rounded-full transition-all duration-500"
                               style={{ width: `${s.value}%`, backgroundColor: s.color || '#1F5F4A' }}
                             />
                           </div>
@@ -255,24 +277,13 @@ export default function TherapistPatientPanel({ client, onClose, onUpdated }) {
                     </div>
                   )}
 
-                  {analytics?.goals?.length > 0 && (
-                    <div className="rounded-2xl border border-black/10 bg-white p-4">
-                      <p className="text-[11px] uppercase tracking-wider text-[#7d8b7d] mb-2">
-                        Active goals snapshot
-                      </p>
-                      <ul className="space-y-2">
-                        {analytics.goals
-                          .filter((g) => g.status !== 'completed')
-                          .slice(0, 5)
-                          .map((g) => (
-                            <li key={g.id} className="text-sm text-[#3f4f41] flex justify-between gap-2">
-                              <span className="font-medium">{sanitizeAiText(g.title)}</span>
-                              <span className="text-[11px] capitalize text-[#7d8b7d]">{g.status}</span>
-                            </li>
-                          ))}
-                      </ul>
-                    </div>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => void refreshAll()}
+                    className="text-[12px] font-semibold text-brand"
+                  >
+                    Refresh stats
+                  </button>
 
                   <button
                     type="button"
@@ -289,10 +300,26 @@ export default function TherapistPatientPanel({ client, onClose, onUpdated }) {
 
           {tab === 'goals' && (
             <>
+              {crisisGoals.length > 0 && (
+                <div className="rounded-2xl border-2 border-[#b42318] bg-[#fef2f2] p-4">
+                  <p className="text-[11px] uppercase tracking-wider text-[#b42318] font-bold mb-3 flex items-center gap-2">
+                    <AlertTriangle size={14} /> Crisis alert — immediate review
+                  </p>
+                  <ul className="space-y-3">
+                    {crisisGoals.map((g) => (
+                      <GoalRow key={`crisis-${g._id || g.id}`} goal={g} onStatus={handleGoalStatus} crisis />
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               {patientSubmitted.length > 0 && (
-                <div className="rounded-2xl border border-[#7a5b4b]/30 bg-[#fdf9f6] p-4">
-                  <p className="text-[11px] uppercase tracking-wider text-[#7a5b4b] font-semibold mb-3">
-                    Patient submitted — review
+                <div className="rounded-2xl border-2 border-[#7a5b4b]/40 bg-[#fdf9f6] p-4">
+                  <p className="text-[11px] uppercase tracking-wider text-[#7a5b4b] font-semibold mb-1">
+                    Awaiting your review ({patientSubmitted.length})
+                  </p>
+                  <p className="text-[12px] text-[#556b5b] mb-3">
+                    Approve to start therapy on this goal, or decline with an optional note.
                   </p>
                   <ul className="space-y-3">
                     {patientSubmitted.map((g) => (
@@ -300,37 +327,12 @@ export default function TherapistPatientPanel({ client, onClose, onUpdated }) {
                         key={g._id || g.id}
                         goal={g}
                         onStatus={handleGoalStatus}
+                        showReviewActions
                       />
                     ))}
                   </ul>
                 </div>
               )}
-
-              <div className="rounded-2xl border border-dashed border-brand/30 bg-[#f8faf8] p-4">
-                <p className="text-[11px] font-semibold text-[#1f5f4a] mb-2">
-                  AI suggestions (reports & stats)
-                </p>
-                {loadingRecs && <p className="text-[11px] text-[#7d8b7d]">Loading…</p>}
-                <div className="flex flex-wrap gap-2">
-                  {!loadingRecs &&
-                    aiRecommendations.map((rec, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => {
-                          setGoalTitle(sanitizeAiText(rec.title || ''))
-                          setGoalDescription(sanitizeAiText(rec.description || ''))
-                          if (rec.priority) setGoalPriority(rec.priority)
-                        }}
-                        className="rounded-xl border border-black/10 bg-white px-2.5 py-1.5 text-left text-[11px] hover:border-brand"
-                      >
-                        <span className="font-semibold text-[#111] block">
-                          {sanitizeAiText(rec.title)}
-                        </span>
-                      </button>
-                    ))}
-                </div>
-              </div>
 
               <div className="rounded-2xl border border-black/10 bg-white p-4 space-y-3">
                 <p className="text-[11px] uppercase tracking-wider text-[#7d8b7d]">
@@ -340,7 +342,7 @@ export default function TherapistPatientPanel({ client, onClose, onUpdated }) {
                   type="text"
                   value={goalTitle}
                   onChange={(e) => setGoalTitle(e.target.value)}
-                  placeholder="Goal title"
+                  placeholder="Goal title — AI suggests as you type"
                   className="w-full rounded-xl border border-black/10 bg-[#f8faf8] px-3 py-2.5 text-sm outline-none focus:border-brand"
                 />
                 <textarea
@@ -350,14 +352,46 @@ export default function TherapistPatientPanel({ client, onClose, onUpdated }) {
                   placeholder="Details (optional)"
                   className="w-full rounded-xl border border-black/10 bg-[#f8faf8] px-3 py-2.5 text-sm outline-none focus:border-brand"
                 />
+
+                {(loadingTypingRecs || typingRecs.length > 0) && (
+                  <div className="rounded-xl border border-dashed border-brand/30 bg-[#f8faf8] p-3">
+                    <p className="text-[10px] font-semibold text-[#1f5f4a] mb-2">
+                      {loadingTypingRecs ? 'Suggesting…' : 'Suggestions for what you typed'}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {typingRecs.map((rec, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => {
+                            setGoalTitle(sanitizeAiText(rec.title || ''))
+                            setGoalDescription(sanitizeAiText(rec.description || ''))
+                            if (rec.priority) setGoalPriority(rec.priority)
+                          }}
+                          className="rounded-lg border border-black/10 bg-white px-2 py-1.5 text-left text-[11px] hover:border-brand max-w-full"
+                        >
+                          <span className="font-semibold text-[#111] block">
+                            {sanitizeAiText(rec.title)}
+                          </span>
+                          {rec.description && (
+                            <span className="text-[#7d8b7d] line-clamp-1">
+                              {sanitizeAiText(rec.description)}
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <select
                   value={goalPriority}
                   onChange={(e) => setGoalPriority(e.target.value)}
                   className="w-full rounded-xl border border-black/10 bg-[#f8faf8] px-3 py-2.5 text-sm outline-none focus:border-brand"
                 >
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
+                  <option value="low">Low priority</option>
+                  <option value="medium">Medium priority</option>
+                  <option value="high">High priority</option>
                 </select>
                 {msg && <p className="text-[12px] text-[#1f5f4a] font-medium">{msg}</p>}
                 <button
@@ -380,7 +414,17 @@ export default function TherapistPatientPanel({ client, onClose, onUpdated }) {
                 )}
                 <ul className="space-y-3">
                   {goals.map((g) => (
-                    <GoalRow key={g._id || g.id} goal={g} onStatus={handleGoalStatus} />
+                    <GoalRow
+                      key={g._id || g.id}
+                      goal={g}
+                      onStatus={handleGoalStatus}
+                      showReviewActions={
+                        g.submittedBy === 'patient' &&
+                        g.status === 'pending' &&
+                        !g.crisisFlag &&
+                        !g.isCrisisAlert
+                      }
+                    />
                   ))}
                 </ul>
               </div>
@@ -392,27 +436,73 @@ export default function TherapistPatientPanel({ client, onClose, onUpdated }) {
   )
 }
 
-function StatCard({ label, value, capitalize: cap }) {
+function StatCard({ label, value, capitalize: cap, highlight }) {
   return (
-    <div className="rounded-2xl border border-black/10 bg-white p-4 text-center">
+    <div
+      className={`rounded-xl p-3 text-center ${
+        highlight ? 'bg-white/90 border border-brand/10' : 'bg-white/60'
+      }`}
+    >
       <p className="text-[10px] uppercase tracking-wider text-[#7d8b7d]">{label}</p>
-      <p className={`mt-1 text-xl font-bold text-[#0f3a2b] ${cap ? 'capitalize' : ''}`}>{value}</p>
+      <p className={`mt-1 text-lg font-bold text-[#0f3a2b] ${cap ? 'capitalize' : ''}`}>{value}</p>
     </div>
   )
 }
 
-function GoalRow({ goal, onStatus }) {
+function SentimentBar({ sentiment }) {
+  const total = (sentiment.positive || 0) + (sentiment.neutral || 0) + (sentiment.negative || 0) || 1
+  const segments = [
+    { label: 'Positive', n: sentiment.positive || 0, color: '#1F5F4A' },
+    { label: 'Neutral', n: sentiment.neutral || 0, color: '#8CA287' },
+    { label: 'Negative', n: sentiment.negative || 0, color: '#c4d4c4' },
+  ]
+  return (
+    <>
+      <div className="flex h-3 rounded-full overflow-hidden mb-3">
+        {segments.map((s) => (
+          <div
+            key={s.label}
+            style={{ width: `${(s.n / total) * 100}%`, backgroundColor: s.color }}
+            title={`${s.label}: ${s.n}`}
+          />
+        ))}
+      </div>
+      <div className="grid grid-cols-3 gap-2 text-center text-sm">
+        {segments.map((s) => (
+          <div key={s.label} className="rounded-xl bg-[#f6f8f3] p-2">
+            <p className="font-bold text-[#23382d]">{s.n}</p>
+            <p className="text-[#7d8b7d] text-[10px]">{s.label}</p>
+          </div>
+        ))}
+      </div>
+    </>
+  )
+}
+
+function GoalRow({ goal, onStatus, crisis: crisisRow, showReviewActions }) {
   const id = goal._id || goal.id
   const title = sanitizeAiText(goal.title)
   const isPatient = goal.submittedBy === 'patient'
+  const isCrisis = crisisRow || goal.crisisFlag || goal.isCrisisAlert
+  const [rejectNote, setRejectNote] = useState('')
+  const [showReject, setShowReject] = useState(false)
 
   return (
-    <li className="rounded-xl border border-black/10 bg-white p-3">
+    <li
+      className={`rounded-xl border p-3 ${
+        isCrisis ? 'border-[#b42318] bg-white' : 'border-black/10 bg-white'
+      }`}
+    >
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
+        <div className="flex-1 min-w-0">
           <p className="font-semibold text-[#111] text-sm">{title}</p>
           {goal.description && (
             <p className="text-[12px] text-[#556b5b] mt-1">{sanitizeAiText(goal.description)}</p>
+          )}
+          {goal.status === 'rejected' && goal.rejectionNote && (
+            <p className="text-[11px] text-[#b42318] mt-1 italic">
+              Note: {sanitizeAiText(goal.rejectionNote)}
+            </p>
           )}
           <div className="mt-2 flex flex-wrap gap-2">
             <span
@@ -420,43 +510,85 @@ function GoalRow({ goal, onStatus }) {
                 goalStatusStyle[goal.status] || goalStatusStyle.pending
               }`}
             >
-              {goal.status}
+              {goal.status === 'rejected' ? 'declined' : goal.status}
             </span>
-            {isPatient && (
+            {isCrisis && (
+              <span className="rounded-full bg-[#fef2f2] border border-[#b42318]/30 px-2 py-0.5 text-[10px] font-semibold text-[#b42318]">
+                Crisis {goal.crisisSeverity || goal.crisisFlag || 'alert'}
+              </span>
+            )}
+            {isPatient && !isCrisis && goal.status !== 'rejected' && (
               <span className="rounded-full bg-[#fdf9f6] border border-[#7a5b4b]/20 px-2 py-0.5 text-[10px] font-semibold text-[#7a5b4b]">
                 Patient submitted
               </span>
             )}
-            {goal.aiRecommended && !isPatient && (
-              <span className="rounded-full bg-[#e8f3ea] px-2 py-0.5 text-[10px] font-semibold text-[#1f5f4a]">
-                AI suggested
-              </span>
-            )}
           </div>
         </div>
-        {goal.status !== 'completed' && (
-          <div className="flex flex-col gap-1">
-            {goal.status === 'pending' && (
+
+        <div className="flex flex-col gap-1 items-end">
+          {showReviewActions && (
+            <>
               <button
                 type="button"
                 onClick={() => void onStatus(id, 'in-progress')}
-                className="text-[11px] font-semibold text-brand whitespace-nowrap"
-              >
-                Start
-              </button>
-            )}
-            {goal.status === 'in-progress' && (
-              <button
-                type="button"
-                onClick={() => void onStatus(id, 'completed')}
-                className="flex items-center gap-1 text-[11px] font-semibold text-[#1f5f4a] whitespace-nowrap"
+                className="flex items-center gap-1 rounded-lg bg-brand text-white px-2.5 py-1 text-[11px] font-semibold"
               >
                 <CheckCircle size={12} />
-                Complete
+                Approve
               </button>
-            )}
-          </div>
-        )}
+              {!showReject ? (
+                <button
+                  type="button"
+                  onClick={() => setShowReject(true)}
+                  className="flex items-center gap-1 text-[11px] font-semibold text-[#b42318]"
+                >
+                  <XCircle size={12} />
+                  Decline
+                </button>
+              ) : (
+                <div className="w-full max-w-[200px] space-y-1">
+                  <input
+                    type="text"
+                    value={rejectNote}
+                    onChange={(e) => setRejectNote(e.target.value)}
+                    placeholder="Optional note"
+                    className="w-full rounded border border-black/10 px-2 py-1 text-[11px]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void onStatus(id, 'rejected', rejectNote)}
+                    className="w-full rounded bg-[#b42318] text-white py-1 text-[11px] font-semibold"
+                  >
+                    Confirm decline
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+          {!showReviewActions && goal.status !== 'completed' && goal.status !== 'rejected' && (
+            <>
+              {goal.status === 'pending' && !isPatient && (
+                <button
+                  type="button"
+                  onClick={() => void onStatus(id, 'in-progress')}
+                  className="text-[11px] font-semibold text-brand whitespace-nowrap"
+                >
+                  Start
+                </button>
+              )}
+              {goal.status === 'in-progress' && (
+                <button
+                  type="button"
+                  onClick={() => void onStatus(id, 'completed')}
+                  className="flex items-center gap-1 text-[11px] font-semibold text-[#1f5f4a] whitespace-nowrap"
+                >
+                  <CheckCircle size={12} />
+                  Complete
+                </button>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </li>
   )

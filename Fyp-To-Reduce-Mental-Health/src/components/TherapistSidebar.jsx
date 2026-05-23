@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { CalendarDays, CreditCard, FileText, Info, LogOut, LayoutDashboard, Briefcase, Users, User, ChevronRight, MessageCircle, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useSocket } from '../context/SocketContext.jsx'
+import TherapistActivityBell from './TherapistActivityBell.jsx'
 
 const navItems = [
 	{ label: 'Dashboard', icon: LayoutDashboard, to: '/therapist-dashboard' },
@@ -28,7 +29,7 @@ export default function TherapistSidebar({ activeItem = 'Dashboard' }) {
 	const { unreadCount } = useSocket() || {}
 	const items = navItems
 	return (
-		<aside className="bg-brand text-white w-full xl:w-[280px] xl:min-w-[280px] rounded-[30px] overflow-hidden max-[640px]:order-first">
+		<aside className="bg-brand text-white w-full xl:w-[280px] xl:min-w-[280px] rounded-[30px] overflow-hidden max-[640px]:order-first xl:sticky xl:top-6 xl:self-start xl:max-h-[calc(100vh-3rem)] xl:overflow-y-auto">
 			<div className="px-6 pt-6 pb-2">
 				<div className="flex items-center gap-3 rounded-2xl bg-white/10 px-4 py-3">
 					<div className="h-10 w-10 rounded-full bg-white flex items-center justify-center">
@@ -43,9 +44,12 @@ export default function TherapistSidebar({ activeItem = 'Dashboard' }) {
 
 			<div className="flex items-center justify-between gap-3 px-6 pt-4 pb-4">
 				<span className="text-[14px] uppercase tracking-[0.2em] font-semibold text-white/80">Menu</span>
-				<button className="p-2 bg-white/10 hover:bg-white/20 rounded-full">
-					<ChevronRight size={18} />
-				</button>
+				<div className="flex items-center gap-1">
+					<TherapistActivityBell />
+					<button type="button" className="p-2 bg-white/10 hover:bg-white/20 rounded-full" aria-hidden>
+						<ChevronRight size={18} />
+					</button>
+				</div>
 			</div>
 
 			<div className="space-y-0 px-4">

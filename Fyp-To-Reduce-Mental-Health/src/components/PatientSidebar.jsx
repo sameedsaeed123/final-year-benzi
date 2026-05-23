@@ -24,7 +24,7 @@ export default function PatientSidebar({ activeItem = 'Dashboard' }) {
   const { unreadCount } = useSocket() || {}
   const items = patientLinked === false ? limitedNavItems : navItems
   return (
-    <aside className="bg-brand text-white w-full xl:w-[280px] xl:min-w-[280px] rounded-[30px] overflow-hidden max-[640px]:order-first">
+    <aside className="bg-brand text-white w-full xl:w-[280px] xl:min-w-[280px] rounded-[30px] overflow-hidden max-[640px]:order-first xl:sticky xl:top-6 xl:self-start xl:max-h-[calc(100vh-3rem)] xl:overflow-y-auto">
       <div className="px-6 pt-6 pb-2">
         <div className="flex items-center gap-3 rounded-2xl bg-white/10 px-4 py-3">
           <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center">

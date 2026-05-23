@@ -19,6 +19,8 @@ import ticketRoutes from './routes/ticket.routes.js'
 import therapistVerificationRoutes from './routes/therapistVerification.routes.js'
 import googleRoutes from './routes/google.routes.js'
 import aiRoutes from './routes/ai.routes.js'
+import subscriptionRoutes from './routes/subscription.routes.js'
+import { stripeWebhook } from './controllers/subscriptionController.js'
 
 const app = express()
 
@@ -38,6 +40,13 @@ app.use(
   })
 )
 app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'))
+
+app.post(
+  '/api/subscriptions/webhook',
+  express.raw({ type: 'application/json' }),
+  stripeWebhook
+)
+
 app.use(express.json({ limit: '1mb' }))
 
 app.use('/api/files', express.static(uploadsRoot))
@@ -61,6 +70,7 @@ app.use('/api/admin', adminRoutes)
 app.use('/api/tickets', ticketRoutes)
 app.use('/api/therapist', therapistVerificationRoutes)
 app.use('/api/ai', aiRoutes)
+app.use('/api/subscriptions', subscriptionRoutes)
 
 app.use((req, res) => {
   res.status(404).json({

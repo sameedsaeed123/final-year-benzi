@@ -90,7 +90,7 @@ export default function BenziAiChatWindow() {
         </div>
         <div>
           <p className="text-[15px] font-semibold text-[#111]">BENZI AI</p>
-          <p className="text-[11px] text-[#7d8b7d]">Context-aware assistant — uses your reports & notes</p>
+          <p className="text-[11px] text-[#7d8b7d]">Supports your therapy — not a replacement for your therapist</p>
         </div>
       </div>
 
@@ -105,7 +105,7 @@ export default function BenziAiChatWindow() {
             <Sparkles size={32} className="mx-auto text-[#1f5f4a] mb-3" />
             <p className="text-[14px] font-semibold text-[#111]">Chat with BENZI</p>
             <p className="text-[12px] text-[#7d8b7d] mt-2 leading-relaxed">
-              Ask about your prescriptions, session notes, or coping strategies. Responses use your uploaded records.
+              Ask about your reports in plain language. For diagnosis, meds, or big decisions — talk to your therapist; BENZI won't guess.
             </p>
           </div>
         )}

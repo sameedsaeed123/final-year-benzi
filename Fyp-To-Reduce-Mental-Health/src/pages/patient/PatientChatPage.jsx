@@ -122,7 +122,7 @@ export default function PatientChatPage() {
           </Link>
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-[1.4fr_280px] max-[1280px]:grid-cols-1">
+        <div className="grid gap-6 xl:grid-cols-[1.4fr_280px] max-[1280px]:grid-cols-1 items-start">
           <div className="rounded-[30px] border border-black/5 bg-white shadow-sm overflow-hidden"
             style={{ height: 'calc(100vh - 260px)', minHeight: '500px' }}>
             <div className="flex border-b border-black/8 bg-[#f5f7f2] px-3 pt-3 gap-2">

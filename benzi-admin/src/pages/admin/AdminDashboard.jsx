@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
-import { Bell, CalendarDays, ChevronRight, ClipboardList, DollarSign, Stethoscope, Users } from 'lucide-react'
-import AdminSidebar from '../../components/AdminSidebar'
+import { ClipboardList, DollarSign, Stethoscope, Users } from 'lucide-react'
+import AdminLayout from '../../components/AdminLayout.jsx'
+import AdminPageLoader from '../../components/AdminPageLoader.jsx'
+import { AdminAlert } from '../../components/AdminAlert.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { displayFirstName } from '../../lib/userDisplay.js'
 import { api } from '../../lib/api.js'
+import AdminPagination from '../../components/AdminPagination.jsx'
+import { paginateList, ADMIN_LIST_PAGE_SIZE } from '../../lib/adminPagination.js'
 
 export default function AdminDashboard() {
 	const { user } = useAuth()
@@ -19,16 +23,19 @@ export default function AdminDashboard() {
 		weeklyCounts: [0, 0, 0, 0, 0, 0, 0]
 	})
 	const [loading, setLoading] = useState(true)
+	const [loadError, setLoadError] = useState('')
+	const [patientsTablePage, setPatientsTablePage] = useState(1)
 
 	useEffect(() => {
 		async function fetchStats() {
 			try {
+				setLoadError('')
 				const json = await api('/admin/dashboard', { method: 'GET' })
 				if (json.success) {
 					setStats(json.data)
 				}
 			} catch (e) {
-				console.error('Failed to fetch admin stats:', e)
+				setLoadError(e.message || 'Failed to load dashboard')
 			} finally {
 				setLoading(false)
 			}
@@ -37,41 +44,39 @@ export default function AdminDashboard() {
 	}, [])
 
 	const statCards = [
-		{ label: 'Total Doctors', value: stats.totalDoctors, delta: stats.docsDelta || '+3.2% vs last month', icon: Stethoscope },
-		{ label: 'Total Patients', value: stats.totalPatients, delta: stats.patientsDelta || '+5.1% vs last month', icon: Users },
-		{ label: 'Monthly Revenue', value: `$${((stats.totalDoctors * 120) + (stats.totalPatients * 45)).toLocaleString()}`, delta: '+4.2% vs last month', icon: DollarSign },
-		{ label: 'Active Subscriptions', value: stats.totalPatients, delta: '+1.5% vs last month', icon: ClipboardList },
+		{ label: 'Total Doctors', value: stats.totalDoctors, delta: stats.docsDelta || '', icon: Stethoscope },
+		{ label: 'Total Patients', value: stats.totalPatients, delta: stats.patientsDelta || '', icon: Users },
+		{ label: 'Monthly Revenue', value: `$${Number(stats.monthlyRevenue || 0).toLocaleString()}`, delta: 'From subscriptions', icon: DollarSign },
+		{ label: 'Active Subscriptions', value: stats.activeSubscriptions ?? 0, delta: `Total revenue $${Number(stats.totalRevenue || 0).toLocaleString()}`, icon: ClipboardList },
 	]
 
-	const packageStats = [
-		{ label: 'Standard Plan', value: stats.distribution?.mentalHealth || 40 },
-		{ label: 'Pro Plan', value: stats.distribution?.selfCare || 35 },
-		{ label: 'Enterprise Plan', value: stats.distribution?.therapy || 25 },
-	]
+	const packageStats = (stats.planDistribution || []).length
+		? stats.planDistribution.map((p) => ({
+				label: p.planName || p.planSlug,
+				value: p.count,
+			}))
+		: [
+				{ label: 'No plans yet', value: 0 },
+			]
 
 	const calendarDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+	const maxPlanCount = Math.max(1, ...packageStats.map((p) => p.value))
+	const patientRows = stats.patientsPerDoctor || []
+	const {
+		items: paginatedPatientRows,
+		totalPages: patientTablePages,
+		currentPage: patientTableSafePage,
+		totalItems: patientTableTotal,
+		startIndex: patientRowStart,
+	} = paginateList(patientRows, patientsTablePage)
 
 	return (
-		<>
-			<div className="pt-36 max-[768px]:pt-32 max-[480px]:pt-28" />
-			<section className="bg-cream min-h-screen px-6 py-10 max-w-7xl mx-auto max-[1024px]:px-4 max-[480px]:px-3">
-				<div className="grid gap-6 xl:grid-cols-[1fr_260px] max-[1280px]:grid-cols-1">
+		<AdminLayout activeItem="Dashboard" title={`Welcome ${welcomeName}!`}>
 					<div className="space-y-6">
-						<div className="flex flex-wrap items-center justify-between gap-4">
-							<p className="text-[18px] font-semibold text-[#0f3a2b]">Dashboard</p>
-							<button className="flex items-center gap-2 bg-white border border-black/10 rounded-full px-4 py-3 shadow-sm text-[13px] font-semibold text-[#111] transition-all hover:-translate-y-0.5">
-								<Bell size={16} />
-								<span>{welcomeName}</span>
-								<ChevronRight size={16} />
-							</button>
-						</div>
-
-						<h1 className="text-center text-[26px] font-extrabold text-brand">{`Welcome ${welcomeName}!`}</h1>
+						<AdminAlert type="error" message={loadError} onDismiss={() => setLoadError('')} />
 
 						{loading ? (
-							<div className="flex items-center justify-center h-48 bg-white/50 border border-brand/10 rounded-2xl">
-								<p className="text-sm font-semibold text-brand animate-pulse">Loading Live Database Stats...</p>
-							</div>
+							<AdminPageLoader label="Loading dashboard…" />
 						) : (
 							<>
 								<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -94,25 +99,27 @@ export default function AdminDashboard() {
 
 								<div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
 									<div className="rounded-2xl border border-black/5 bg-white p-5 shadow-sm">
-										<p className="text-[13px] text-[#7d8b7d]">Top Subscriptions</p>
-										<h2 className="text-[18px] font-semibold text-[#111]">Most Sold Packages</h2>
+										<p className="text-[13px] text-[#7d8b7d]">Subscriptions</p>
+										<h2 className="text-[18px] font-semibold text-[#111]">Therapists by plan</h2>
 										<div className="mt-4 space-y-4">
-											{packageStats.map((item) => (
+											{packageStats.map((item) => {
+												const pct = Math.round((item.value / maxPlanCount) * 100)
+												return (
 												<div key={item.label} className="flex items-center gap-4">
 													<div
 														className="h-11 w-11 rounded-full flex items-center justify-center text-[11px] font-semibold text-brand"
 														style={{
-															background: `conic-gradient(#1f5f4a ${item.value}%, #e9efe8 ${item.value}% 100%)`,
+															background: `conic-gradient(#1f5f4a ${pct}%, #e9efe8 ${pct}% 100%)`,
 														}}
 													>
-														{item.value}%
+														{item.value}
 													</div>
 													<div>
 														<p className="text-[13px] font-semibold text-[#111]">{item.label}</p>
-														<p className="text-[11px] text-[#7d8b7d]">{item.value}% of total sales</p>
+														<p className="text-[11px] text-[#7d8b7d]">{item.value} therapist(s)</p>
 													</div>
 												</div>
-											))}
+											)})}
 										</div>
 									</div>
 
@@ -162,10 +169,10 @@ export default function AdminDashboard() {
 												</tr>
 											</thead>
 											<tbody>
-												{stats.patientsPerDoctor && stats.patientsPerDoctor.length > 0 ? (
-													stats.patientsPerDoctor.map((item, index) => (
-														<tr key={index} className="border-b border-black/5 hover:bg-[#fafbfa] transition-all">
-															<td className="py-4 px-4 font-semibold text-[#666]">{index + 1}</td>
+												{paginatedPatientRows.length > 0 ? (
+													paginatedPatientRows.map((item, index) => (
+														<tr key={item.doctorName || index} className="border-b border-black/5 hover:bg-[#fafbfa] transition-all">
+															<td className="py-4 px-4 font-semibold text-[#666]">{patientRowStart + index + 1}</td>
 															<td className="py-4 px-4 font-bold text-brand">{item.doctorName}</td>
 															<td className="py-4 px-4 text-[#555]">{item.specialization}</td>
 															<td className="py-4 px-4 text-center font-semibold text-[#111]">{item.totalPatients}</td>
@@ -192,14 +199,17 @@ export default function AdminDashboard() {
 											</tbody>
 										</table>
 									</div>
+									<AdminPagination
+										currentPage={patientTableSafePage}
+										totalPages={patientTablePages}
+										totalItems={patientTableTotal}
+										pageSize={ADMIN_LIST_PAGE_SIZE}
+										onPageChange={setPatientsTablePage}
+									/>
 								</div>
 							</>
 						)}
 					</div>
-
-					<AdminSidebar activeItem="Dashboard" />
-				</div>
-			</section>
-		</>
+		</AdminLayout>
 	)
 }

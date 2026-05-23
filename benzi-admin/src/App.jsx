@@ -4,11 +4,15 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminDoctorsPage from './pages/admin/AdminDoctorsPage'
 import AdminSubscriptionsPage from './pages/admin/AdminSubscriptionsPage'
+import AdminPlansPage from './pages/admin/AdminPlansPage'
+import AdminCouponsPage from './pages/admin/AdminCouponsPage'
 import AdminPatientsPage from './pages/admin/AdminPatientsPage'
 import AdminRevenuePage from './pages/admin/AdminRevenuePage'
 import AdminVerificationsPage from './pages/admin/AdminVerificationsPage'
 import AdminCustomerSupportPage from './pages/admin/AdminCustomerSupportPage'
 import AdminAppointmentsPage from './pages/admin/AdminAppointmentsPage'
+import AdminProfilePage from './pages/admin/AdminProfilePage'
+import AdminAboutBenziPage from './pages/admin/AdminAboutBenziPage'
 
 import RoleRoute from './components/RoleRoute.jsx'
 
@@ -22,13 +26,16 @@ function App() {
       <Route path="/admin-dashboard" element={<RoleRoute allow={['admin']}><AdminDashboard /></RoleRoute>} />
       <Route path="/admin-doctors" element={<RoleRoute allow={['admin']}><AdminDoctorsPage /></RoleRoute>} />
       <Route path="/admin-subscriptions" element={<RoleRoute allow={['admin']}><AdminSubscriptionsPage /></RoleRoute>} />
+      <Route path="/admin-plans" element={<RoleRoute allow={['admin']}><AdminPlansPage /></RoleRoute>} />
+      <Route path="/admin-coupons" element={<RoleRoute allow={['admin']}><AdminCouponsPage /></RoleRoute>} />
       <Route path="/admin-patients" element={<RoleRoute allow={['admin']}><AdminPatientsPage /></RoleRoute>} />
       <Route path="/admin-appointments" element={<RoleRoute allow={['admin']}><AdminAppointmentsPage /></RoleRoute>} />
       <Route path="/admin-revenue" element={<RoleRoute allow={['admin']}><AdminRevenuePage /></RoleRoute>} />
       <Route path="/admin-verifications" element={<RoleRoute allow={['admin']}><AdminVerificationsPage /></RoleRoute>} />
       <Route path="/admin-customer-support" element={<RoleRoute allow={['admin']}><AdminCustomerSupportPage /></RoleRoute>} />
+      <Route path="/admin-profile" element={<RoleRoute allow={['admin']}><AdminProfilePage /></RoleRoute>} />
+      <Route path="/admin-about-benzi" element={<RoleRoute allow={['admin']}><AdminAboutBenziPage /></RoleRoute>} />
 
-      
       <Route path="*" element={<Navigate to="/admin-dashboard" replace />} />
     </Routes>
   )

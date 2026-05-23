@@ -16,3 +16,12 @@ export function sanitizeAiText(value) {
   }
   return s
 }
+
+export function sanitizeChatReply(value) {
+  if (value == null) return ''
+  let s = sanitizeAiText(value)
+  s = s.replace(/^\s*[-*•]\s+/gm, '')
+  s = s.replace(/^\s*\d+\.\s+/gm, '')
+  s = s.replace(/\n{3,}/g, '\n\n')
+  return s.trim()
+}

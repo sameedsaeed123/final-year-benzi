@@ -111,7 +111,7 @@ export async function getAiChatResponse(_patientUserId, newUserMessage, context)
       ]
       return messages
     },
-    { max_tokens: 480, temperature: 0.72 }
+    { max_tokens: 320, temperature: 0.72 }
   )
 }
 

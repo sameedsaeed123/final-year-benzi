@@ -10,6 +10,7 @@ import { listClientsForTherapist } from '../services/patientService.js'
 import { listActiveTherapistServices } from '../services/therapistServicesService.js'
 import { User } from '../models/User.js'
 import { Patient } from '../models/Patient.js'
+import { Therapist } from '../models/Therapist.js'
 import emailService from '../services/emailService.js'
 import { env } from '../config/environment.js'
 
@@ -32,6 +33,62 @@ export async function therapistAvailabilityPatch(req, res, next) {
     return sendSuccess(res, { weeklyAvailability: data }, 'Updated', 200)
   } catch (e) {
     if (e.statusCode) return sendError(res, e.message, e.statusCode)
+    next(e)
+  }
+}
+
+export async function therapistPublicDetail(req, res, next) {
+  try {
+    const { therapistUserId } = req.params
+    if (!mongoose.Types.ObjectId.isValid(therapistUserId)) {
+      return sendError(res, 'Invalid therapist ID', 400)
+    }
+
+    const [user, therapist] = await Promise.all([
+      User.findById(therapistUserId).select('firstName lastName email profileImageUrl status role').lean(),
+      Therapist.findOne({ userId: therapistUserId }).lean(),
+    ])
+
+    if (!user || user.role !== 'therapist' || !therapist) {
+      return sendError(res, 'Therapist not found', 404)
+    }
+
+    const f = (user.firstName || '').trim()
+    const l = (user.lastName || '').trim()
+    const base = `${f} ${l}`.trim()
+    const name = base.toLowerCase().startsWith('dr.') ? base : `Dr. ${base}`
+
+    return sendSuccess(
+      res,
+      {
+        id: String(therapistUserId),
+        name: name || 'Therapist',
+        specializationTitle: therapist.specializationTitle || '',
+        qualification: therapist.qualification || '',
+        practiceLocation: therapist.practiceLocation || '',
+        city: therapist.city || 'Lahore',
+        bio: therapist.bio || '',
+        experienceYears: therapist.experienceYears ?? 0,
+        avgRating: therapist.avgRating ?? 0,
+        reviewCount: therapist.reviewCount ?? 0,
+        profileImageUrl: (user.profileImageUrl || therapist.profileImageUrl || '').trim(),
+        availableLocations: therapist.availableLocations?.length
+          ? therapist.availableLocations
+          : ['online'],
+        availableLocationLabels: therapist.availableLocationLabels || {},
+        payment: {
+          bankName: therapist.paymentBankName || '',
+          accountName: therapist.paymentAccountName || '',
+          accountNumber: therapist.paymentAccountNumber || '',
+        },
+        paymentBankName: therapist.paymentBankName || '',
+        paymentAccountName: therapist.paymentAccountName || '',
+        paymentAccountNumber: therapist.paymentAccountNumber || '',
+      },
+      'OK',
+      200
+    )
+  } catch (e) {
     next(e)
   }
 }
@@ -108,6 +165,9 @@ export async function therapistServicesPublic(req, res, next) {
 
 export async function invitePatient(req, res, next) {
   try {
+    const { assertCanAddPatient } = await import('../services/subscriptionLimitsService.js')
+    await assertCanAddPatient(req.user.id)
+
     const { email, firstName, lastName, phone = '' } = req.body
     if (!email || !firstName || !lastName) {
       return sendError(res, 'Email, first name, and last name are required', 400)

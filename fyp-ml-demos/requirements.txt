@@ -1,0 +1,5 @@
+# Lightweight FYP demos — use CPU; first run downloads ~250MB model
+flask>=3.0.0
+requests>=2.31.0
+transformers>=4.40.0
+torch>=2.2.0

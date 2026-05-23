@@ -22,6 +22,8 @@ import TherapistAppointmentsPage from './pages/therapist/TherapistAppointmentsPa
 import TherapistClientsPage from './pages/therapist/TherapistClientsPage'
 import TherapistServicesPage from './pages/therapist/TherapistServicesPage'
 import TherapistSubscriptionPage from './pages/therapist/TherapistSubscriptionPage'
+import TherapistCheckoutPage from './pages/therapist/TherapistCheckoutPage'
+import TherapistCheckoutSuccessPage from './pages/therapist/TherapistCheckoutSuccessPage'
 import TherapistPaymentPage from './pages/therapist/TherapistPaymentPage'
 import TherapistAboutBenziPage from './pages/therapist/TherapistAboutBenziPage'
 import TherapistReportsPage from './pages/therapist/TherapistReportsPage'
@@ -66,6 +68,9 @@ function App() {
         <Route path="/therapist-clients" element={<RoleRoute allow={['therapist']}><TherapistClientsPage /></RoleRoute>} />
         <Route path="/therapist-services" element={<RoleRoute allow={['therapist']}><TherapistServicesPage /></RoleRoute>} />
         <Route path="/therapist-subscription" element={<RoleRoute allow={['therapist']}><TherapistSubscriptionPage /></RoleRoute>} />
+        <Route path="/therapist-checkout" element={<TherapistCheckoutPage />} />
+        <Route path="/checkout" element={<TherapistCheckoutPage />} />
+        <Route path="/therapist-checkout/success" element={<TherapistCheckoutSuccessPage />} />
         <Route path="/therapist-payment" element={<RoleRoute allow={['therapist']}><TherapistPaymentPage /></RoleRoute>} />
         <Route path="/therapist-about" element={<RoleRoute allow={['therapist']}><TherapistAboutBenziPage /></RoleRoute>} />
         <Route path="/therapist-reports" element={<RoleRoute allow={['therapist']}><TherapistReportsPage /></RoleRoute>} />

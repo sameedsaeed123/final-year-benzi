@@ -65,17 +65,17 @@ function fallbackInsight(context, patientDraft) {
   if (patientDraft) {
     insight += `The goal you're working on ("${patientDraft.slice(0, 60)}…") is a meaningful step — your therapist will review it.`
   } else {
-    insight += `Keep using BENZI AI after sessions to track how you feel over time.`
+    insight += `Share how you're feeling with your therapist — they guide your care.`
   }
 
   const tips = []
   if (s.sentiment?.negative > 0) {
-    tips.push('Try a 5-minute breathing break when stress spikes.')
+    tips.push('Try a 5-minute breathing break when stress spikes — and tell your therapist if it keeps happening.')
   }
   if ((context.recordsWithPdfText || 0) > 0) {
-    tips.push('Review your uploaded reports with BENZI AI for plain-language summaries.')
+    tips.push('Ask BENZI AI to summarize a report, then discuss questions with your therapist.')
   }
-  tips.push('Chat with BENZI AI after tough days — it updates your progress charts.')
+  tips.push('Bring questions from this app to your next therapy session.')
 
   return { insight, tips: tips.slice(0, 3), recommendations: [] }
 }

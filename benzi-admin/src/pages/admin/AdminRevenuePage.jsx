@@ -1,137 +1,163 @@
-import { useState } from 'react'
-import { MoreVertical } from 'lucide-react'
-import AdminSidebar from '../../components/AdminSidebar'
-
-const paymentRows = [
-	{ id: 'PMT-001', doctor: 'Dr. Rahima', patient: 'John D.', date: '2026-05-01', service: 'Therapy Session', amount: '$120', status: 'Completed' },
-	{ id: 'PMT-002', doctor: 'Dr. Shayan', patient: 'Mary L.', date: '2026-05-02', service: 'Counseling', amount: '$95', status: 'Pending' },
-	{ id: 'PMT-003', doctor: 'Dr. Sabaa', patient: 'Ali K.', date: '2026-05-02', service: 'Consultation', amount: '$200', status: 'Completed' },
-	{ id: 'PMT-004', doctor: 'Dr. Alina', patient: 'Sara P.', date: '2026-05-03', service: 'Therapy Session', amount: '$150', status: 'Pending' },
-]
+import { useEffect, useState } from 'react'
+import AdminLayout from '../../components/AdminLayout.jsx'
+import AdminPageLoader from '../../components/AdminPageLoader.jsx'
+import AdminPagination from '../../components/AdminPagination.jsx'
+import { AdminAlert } from '../../components/AdminAlert.jsx'
+import { api } from '../../lib/api.js'
 
 const statusStyles = {
-	Completed: 'bg-[#e7f4ee] text-[#1f5f4a]',
-	Pending: 'bg-[#fff4df] text-[#b45309]',
+  Completed: 'bg-[#e7f4ee] text-[#1f5f4a]',
+  Pending: 'bg-[#fff4df] text-[#b45309]',
 }
 
-const monthlyBars = [60, 45, 80]
-
 export default function AdminRevenuePage() {
-	const [openMenuId, setOpenMenuId] = useState(null)
+  const [stats, setStats] = useState(null)
+  const [payments, setPayments] = useState([])
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-	const toggleMenu = (paymentId) => {
-		setOpenMenuId((currentId) => (currentId === paymentId ? null : paymentId))
-	}
+  const load = async (p = page) => {
+    setLoading(true)
+    setError('')
+    try {
+      const [statsJson, payJson] = await Promise.all([
+        api('/admin/subscription/revenue', { method: 'GET', silent: true }),
+        api(`/admin/subscription/payments?page=${p}&limit=5`, { method: 'GET' }),
+      ])
+      setStats(statsJson.data || null)
+      setPayments(payJson.data?.payments || [])
+      setTotal(payJson.data?.total || 0)
+    } catch (e) {
+      setError(e.message || 'Failed to load revenue data')
+    } finally {
+      setLoading(false)
+    }
+  }
 
-	return (
-		<>
-			<div className="pt-36 max-[768px]:pt-32 max-[480px]:pt-28" />
-			<section className="bg-cream min-h-screen px-6 py-10 max-w-7xl mx-auto max-[1024px]:px-4 max-[480px]:px-3">
-				<div className="grid gap-6 xl:grid-cols-[1fr_260px] max-[1280px]:grid-cols-1">
-					<div className="space-y-6">
-						<h1 className="text-[18px] font-semibold text-[#0f3a2b]">Revenue</h1>
+  useEffect(() => {
+    void load(page)
+  }, [page])
 
-						<div className="grid gap-4 md:grid-cols-3">
-							{[
-								{ label: 'Total Revenue', value: '$124,800', delta: '+8.3%' },
-								{ label: 'This Month', value: '$24,800', delta: '+4.2%' },
-								{ label: 'Pending Payouts', value: '$3,200', delta: '-1.1%' },
-							].map((card) => (
-								<div key={card.label} className="rounded-2xl border border-black/5 bg-white p-4 shadow-sm">
-									<p className="text-[12px] text-[#7d8b7d]">{card.label}</p>
-									<p className="mt-2 text-[20px] font-semibold text-[#111]">{card.value}</p>
-									<p className="text-[11px] text-[#4f7a66]">{card.delta}</p>
-								</div>
-							))}
-						</div>
+  const totalPages = Math.max(1, Math.ceil(total / 5))
+  const maxMonthly = Math.max(1, ...(stats?.monthlyRevenue?.map((m) => m.revenue) || [1]))
 
-						<div className="rounded-2xl border border-black/5 bg-white p-5 shadow-sm">
-							<p className="text-[13px] font-semibold text-[#111]">Payments</p>
-							<div className="mt-4 overflow-x-auto">
-								<table className="min-w-full border border-black/10">
-									<thead>
-										<tr className="text-left text-[11px] uppercase tracking-[0.2em] text-[#7d8b7d] bg-[#f7f4ef]">
-											<th className="px-3 py-3 border border-black/10">Payment ID</th>
-											<th className="px-3 py-3 border border-black/10">Doctor</th>
-											<th className="px-3 py-3 border border-black/10">Patient</th>
-											<th className="px-3 py-3 border border-black/10">Date</th>
-											<th className="px-3 py-3 border border-black/10">Service</th>
-											<th className="px-3 py-3 border border-black/10">Amount</th>
-											<th className="px-3 py-3 border border-black/10">Status</th>
-											<th className="px-3 py-3 border border-black/10">Action</th>
-										</tr>
-									</thead>
-									<tbody>
-										{paymentRows.map((payment) => (
-											<tr key={payment.id} className="text-sm text-[#3f4f41]">
-												<td className="px-3 py-3 border border-black/10 font-semibold text-[#111]">{payment.id}</td>
-												<td className="px-3 py-3 border border-black/10">{payment.doctor}</td>
-												<td className="px-3 py-3 border border-black/10">{payment.patient}</td>
-												<td className="px-3 py-3 border border-black/10">{payment.date}</td>
-												<td className="px-3 py-3 border border-black/10">{payment.service}</td>
-												<td className="px-3 py-3 border border-black/10">{payment.amount}</td>
-												<td className="px-3 py-3 border border-black/10">
-													<span className={`inline-flex rounded-full px-3 py-1 text-[11px] font-semibold ${statusStyles[payment.status]}`}>
-														{payment.status}
-													</span>
-												</td>
-												<td className="px-3 py-3 border border-black/10 relative">
-													<button
-														className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-black/10 bg-white text-[#6b7b6a]"
-														onClick={() => toggleMenu(payment.id)}
-													>
-														<MoreVertical size={14} />
-													</button>
-													{openMenuId === payment.id && (
-														<div className="absolute right-6 top-12 z-10 w-32 rounded-xl border border-black/10 bg-white shadow-lg">
-															<button className="w-full px-4 py-2 text-left text-[12px] text-[#3f4f41] hover:bg-[#f5f7f2]">Edit</button>
-															<button className="w-full px-4 py-2 text-left text-[12px] text-red-600 hover:bg-[#f5f7f2]">Delete</button>
-														</div>
-													)}
-												</td>
-											</tr>
-										))}
-									</tbody>
-								</table>
-							</div>
-						</div>
+  return (
+    <AdminLayout activeItem="Revenue" title="Revenue">
+      <AdminAlert message={error} onDismiss={() => setError('')} />
 
-						<div className="grid gap-6 lg:grid-cols-2">
-							<div className="rounded-2xl border border-black/5 bg-white p-5 shadow-sm">
-								<p className="text-[13px] font-semibold text-[#111]">Monthly Revenue</p>
-								<div className="mt-4 flex flex-col gap-3">
-									{['Aug', 'Sep', 'Oct'].map((month, index) => (
-										<div key={month} className="flex items-center gap-3 text-[11px] text-[#6b7b6a]">
-											<span className="w-8">{month}</span>
-											<div className="flex-1 h-3 rounded-full bg-[#e9efe8]">
-												<div className="h-3 rounded-full bg-brand" style={{ width: `${monthlyBars[index]}%` }} />
-											</div>
-											<span>${(monthlyBars[index] * 10).toFixed(0)}</span>
-										</div>
-									))}
-								</div>
-							</div>
+      {loading && !stats ? (
+        <AdminPageLoader label="Loading revenue…" />
+      ) : (
+        <>
+          <div className="grid gap-4 md:grid-cols-3">
+            {[
+              { label: 'Total subscription revenue', value: `$${stats?.totalRevenue?.toLocaleString() ?? '0'}` },
+              { label: 'This month', value: `$${stats?.monthRevenue?.toLocaleString() ?? '0'}` },
+              { label: 'Active subscriptions', value: stats?.activeSubscriptions ?? 0 },
+            ].map((card) => (
+              <div key={card.label} className="rounded-2xl border border-black/5 bg-white p-4 shadow-sm">
+                <p className="text-[12px] text-[#7d8b7d]">{card.label}</p>
+                <p className="mt-2 text-[22px] font-bold text-[#0f3a2b]">{card.value}</p>
+              </div>
+            ))}
+          </div>
 
-							<div className="rounded-2xl border border-black/5 bg-white p-5 shadow-sm">
-								<p className="text-[13px] font-semibold text-[#111]">Revenue by Plan</p>
-								<div className="mt-6 flex items-center justify-center">
-									<div
-										className="h-28 w-28 rounded-full"
-										style={{ background: 'conic-gradient(#1f5f4a 45%, #5a9378 45% 70%, #a9cbb7 70% 100%)' }}
-									/>
-								</div>
-								<div className="mt-6 flex items-center justify-center gap-4 text-[11px] text-[#6b7b6a]">
-									<span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-[#a9cbb7]" />Standard</span>
-									<span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-brand" />Pro</span>
-									<span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-[#5a9378]" />Enterprise</span>
-								</div>
-							</div>
-						</div>
-					</div>
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className="rounded-2xl border border-black/5 bg-white p-5 shadow-sm">
+              <p className="text-[13px] font-semibold text-[#111]">Monthly revenue</p>
+              <div className="mt-4 flex flex-col gap-3">
+                {(stats?.monthlyRevenue || []).slice(-6).map((row) => (
+                  <div key={row.label} className="flex items-center gap-3 text-[11px] text-[#6b7b6a]">
+                    <span className="w-16 shrink-0 truncate">{row.label}</span>
+                    <div className="flex-1 h-3 rounded-full bg-[#e9efe8]">
+                      <div
+                        className="h-3 rounded-full bg-brand"
+                        style={{ width: `${Math.round((row.revenue / maxMonthly) * 100)}%` }}
+                      />
+                    </div>
+                    <span className="w-12 text-right font-semibold">${row.revenue}</span>
+                  </div>
+                ))}
+                {!stats?.monthlyRevenue?.length && (
+                  <p className="text-[12px] text-[#7d8b7d]">No subscription payments recorded yet.</p>
+                )}
+              </div>
+            </div>
 
-					<AdminSidebar activeItem="Revenue" />
-				</div>
-			</section>
-		</>
-	)
+            <div className="rounded-2xl border border-black/5 bg-white p-5 shadow-sm">
+              <p className="text-[13px] font-semibold text-[#111]">Revenue by plan</p>
+              <ul className="mt-4 space-y-3">
+                {(stats?.revenueByPlan || []).map((row) => (
+                  <li key={row.planSlug} className="flex justify-between text-sm">
+                    <span className="text-[#3f4f41]">
+                      {row.planName}{' '}
+                      <span className="text-[#7d8b7d]">({row.count} therapists)</span>
+                    </span>
+                    <span className="font-semibold text-brand">${row.revenue}</span>
+                  </li>
+                ))}
+                {!stats?.revenueByPlan?.length && (
+                  <p className="text-[12px] text-[#7d8b7d]">No plan revenue yet.</p>
+                )}
+              </ul>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-black/5 bg-white p-5 shadow-sm">
+            <p className="text-[13px] font-semibold text-[#111] mb-4">Subscription payments</p>
+            <div className="overflow-x-auto">
+              <table className="min-w-full border border-black/10 text-sm">
+                <thead>
+                  <tr className="text-left text-[11px] uppercase tracking-[0.15em] text-[#7d8b7d] bg-[#f7f4ef]">
+                    <th className="px-3 py-3 border border-black/10">ID</th>
+                    <th className="px-3 py-3 border border-black/10">Doctor</th>
+                    <th className="px-3 py-3 border border-black/10">Date</th>
+                    <th className="px-3 py-3 border border-black/10">Plan</th>
+                    <th className="px-3 py-3 border border-black/10">Amount</th>
+                    <th className="px-3 py-3 border border-black/10">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {payments.map((p) => (
+                    <tr key={p.id} className="text-[#3f4f41]">
+                      <td className="px-3 py-3 border border-black/10 font-mono text-[11px]">{p.paymentId}</td>
+                      <td className="px-3 py-3 border border-black/10">
+                        <p className="font-semibold text-[#111]">{p.doctor}</p>
+                        <p className="text-[11px] text-[#7d8b7d]">{p.email}</p>
+                      </td>
+                      <td className="px-3 py-3 border border-black/10">
+                        {p.date ? new Date(p.date).toLocaleDateString() : '—'}
+                      </td>
+                      <td className="px-3 py-3 border border-black/10 capitalize">{p.plan}</td>
+                      <td className="px-3 py-3 border border-black/10 font-semibold">${p.amount}</td>
+                      <td className="px-3 py-3 border border-black/10">
+                        <span
+                          className={`inline-flex rounded-full px-3 py-1 text-[11px] font-semibold ${
+                            statusStyles[p.status] || statusStyles.Pending
+                          }`}
+                        >
+                          {p.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {!payments.length && !loading && (
+              <p className="py-6 text-center text-[#7d8b7d] text-sm">No payments yet.</p>
+            )}
+            <AdminPagination
+              currentPage={page}
+              totalPages={totalPages}
+              totalItems={total}
+              onPageChange={setPage}
+            />
+          </div>
+        </>
+      )}
+    </AdminLayout>
+  )
 }

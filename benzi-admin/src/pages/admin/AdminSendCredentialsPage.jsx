@@ -25,7 +25,7 @@ export default function AdminSendCredentialsPage() {
 		<>
 			<div className="pt-36 max-[768px]:pt-32 max-[480px]:pt-28" />
 			<section className="bg-cream min-h-screen px-6 py-10 max-w-7xl mx-auto max-[1024px]:px-4 max-[480px]:px-3">
-				<div className="grid gap-6 xl:grid-cols-[1fr_260px] max-[1280px]:grid-cols-1">
+				<div className="grid gap-6 xl:grid-cols-[1fr_260px] max-[1280px]:grid-cols-1 items-start">
 					<div className="space-y-6">
 						<div>
 							<h1 className="text-[18px] font-semibold text-[#0f3a2b]">Send Credentials</h1>

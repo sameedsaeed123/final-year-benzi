@@ -6,6 +6,7 @@ import TherapistPatientPanel from '../../components/TherapistPatientPanel.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { displayFirstName } from '../../lib/userDisplay.js'
 import { api } from '../../lib/api.js'
+import { useSocket } from '../../context/SocketContext.jsx'
 
 const statusStyles = {
 	Active: 'bg-[#e7f1e8] text-[#1f5f4a]',
@@ -34,6 +35,7 @@ export default function TherapistClientsPage() {
 	const [inviteSuccess, setInviteSuccess] = useState('')
 	const [aiByPatient, setAiByPatient] = useState({})
 	const [panelClient, setPanelClient] = useState(null)
+	const { subscribeActivity } = useSocket() || {}
 
 	const load = useCallback(async () => {
 		setLoading(true)
@@ -92,6 +94,14 @@ export default function TherapistClientsPage() {
 			})
 			.catch(() => {})
 	}, [])
+
+	useEffect(() => {
+		if (!subscribeActivity || !clients.length) return
+		return subscribeActivity((payload) => {
+			const pid = payload?.patientUserId
+			if (pid) refreshPatientAi(pid)
+		})
+	}, [subscribeActivity, clients.length, refreshPatientAi])
 
 	useEffect(() => {
 		const pid = searchParams.get('patient')
@@ -167,7 +177,7 @@ export default function TherapistClientsPage() {
 					</Link>
 				</div>
 
-				<div className="grid gap-6 xl:grid-cols-[1.4fr_280px] max-[1280px]:grid-cols-1">
+				<div className="grid gap-6 xl:grid-cols-[1.4fr_280px] max-[1280px]:grid-cols-1 items-start">
 					<div className="space-y-6">
 						<div className="rounded-[30px] border border-black/5 bg-cream p-6 shadow-sm">
 							<div className="flex flex-wrap items-center justify-between gap-4">

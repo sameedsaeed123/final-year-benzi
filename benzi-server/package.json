@@ -13,7 +13,10 @@
     "db:clear-patients": "node src/scripts/clearPatients.js",
     "test:api": "node src/scripts/apiSmokeTest.mjs",
     "test:email": "node src/scripts/testEmailConnection.js",
-    "diagnose:mongo": "node src/scripts/diagnoseMongo.mjs"
+    "diagnose:mongo": "node src/scripts/diagnoseMongo.mjs",
+    "test:ollama": "node src/scripts/test-ollama.mjs",
+    "seed:plans": "node src/scripts/seedSubscriptionPlans.js",
+    "stripe:sync-plans": "node src/scripts/syncStripePlans.mjs"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -40,7 +43,8 @@
     "pdfjs-dist": "3.11.174",
     "qrcode": "^1.5.4",
     "socket.io": "^4.8.3",
-    "speakeasy": "^2.0.0"
+    "speakeasy": "^2.0.0",
+    "stripe": "^22.1.1"
   },
   "devDependencies": {
     "mongodb-memory-server": "^11.1.0"

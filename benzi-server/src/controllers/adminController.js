@@ -10,6 +10,8 @@ import { EmailLog } from '../models/EmailLog.js'
 import { checkQueueHealth, retryFailedJob } from '../queues/emailQueue.js'
 import { listAppointmentsForAdmin } from '../services/appointmentService.js'
 import { processAppointmentCompletions } from '../services/appointmentCompletionService.js'
+import { getAdminSubscriptionStats } from '../services/adminRevenueService.js'
+import { invalidateAdminCache } from '../services/adminCacheService.js'
 
 // Helper to check if a date is within 7 days
 const isWithinWeek = (date) => {
@@ -113,6 +115,8 @@ export async function getDashboardStats(req, res, next) {
       dayCounts.push(count)
     }
 
+    const subscriptionStats = await getAdminSubscriptionStats()
+
     return sendSuccess(res, {
       totalDoctors,
       totalPatients,
@@ -120,7 +124,12 @@ export async function getDashboardStats(req, res, next) {
       patientsDelta: `+${patientsDelta}% vs last month`,
       patientsPerDoctor,
       distribution,
-      weeklyCounts: dayCounts
+      weeklyCounts: dayCounts,
+      monthlyRevenue: subscriptionStats.monthRevenue,
+      totalRevenue: subscriptionStats.totalRevenue,
+      activeSubscriptions: subscriptionStats.activeSubscriptions,
+      planDistribution: subscriptionStats.planDistribution,
+      revenueByPlan: subscriptionStats.revenueByPlan,
     }, 'OK', 200)
   } catch (e) {
     next(e)
@@ -139,12 +148,19 @@ export async function getDoctorsList(req, res, next) {
       
       const status = isWithinWeek(doc.lastLoginAt) ? 'Active' : 'Inactive'
 
+      const { TherapistSubscription } = await import('../models/TherapistSubscription.js')
+      const sub = await TherapistSubscription.findOne({ therapistUserId: doc._id })
+        .select('planName planSlug status')
+        .lean()
+
       result.push({
         id: `#00${i + 1}`,
+        userId: String(doc._id),
         name: `Dr. ${doc.firstName} ${doc.lastName}`,
         specialization: therapistProfile?.specializationTitle || 'Counselor',
         patients: patientCount,
-        subscription: 'None', // Statically forced to None as requested!
+        subscription: sub?.planName || sub?.planSlug || 'None',
+        subscriptionStatus: sub?.status || 'none',
         status: doc.status === 'SUSPENDED' ? 'Suspended' : status
       })
     }
@@ -220,6 +236,7 @@ export async function replyToTicket(req, res, next) {
       ticketUrl
     )
 
+    await invalidateAdminCache()
     return sendSuccess(res, ticket, 'Reply added successfully', 200)
   } catch (e) {
     next(e)
@@ -253,6 +270,7 @@ export async function updateTicketStatus(req, res, next) {
       )
     }
 
+    await invalidateAdminCache()
     return sendSuccess(res, ticket, 'Status updated successfully', 200)
   } catch (e) {
     next(e)
@@ -321,6 +339,7 @@ export async function verifyTherapist(req, res, next) {
     }
 
     await therapist.save()
+    await invalidateAdminCache()
     return sendSuccess(res, therapist, `Therapist has been ${approve ? 'Approved' : 'Rejected'} successfully!`, 200)
   } catch (e) {
     next(e)

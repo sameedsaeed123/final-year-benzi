@@ -7,10 +7,16 @@ const aiGoalSchema = new mongoose.Schema(
     title: { type: String, required: true },
     description: { type: String, default: '' },
     priority: { type: String, enum: ['high', 'medium', 'low'], default: 'medium' },
-    status: { type: String, enum: ['pending', 'in-progress', 'completed'], default: 'pending' },
+    status: {
+      type: String,
+      enum: ['pending', 'in-progress', 'completed', 'rejected'],
+      default: 'pending',
+    },
+    rejectionNote: { type: String, default: '' },
     aiRecommended: { type: Boolean, default: false },
     /** therapist = assigned by clinician | patient = submitted by patient for therapist review */
     submittedBy: { type: String, enum: ['therapist', 'patient'], default: 'therapist' },
+    crisisFlag: { type: String, enum: ['high', 'medium'], default: null },
   },
   { timestamps: true }
 )
