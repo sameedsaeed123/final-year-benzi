@@ -32,7 +32,8 @@ Click this link (after your code is on GitHub):
 - Top menu: **Runtime**
 - Click **Run all**
 - Click **Run anyway** if it asks
-- Wait ~2–3 hours (you can leave the tab open)
+- Train ~4 min; **merge 15–40 min** — do **not** press Stop on merge
+- Do **not** disconnect until the zip downloads
 
 ### 5. Download
 

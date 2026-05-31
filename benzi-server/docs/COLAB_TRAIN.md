@@ -1,22 +1,20 @@
-# Train BENZI on Google Colab (~2–3 hours)
+# Train BENZI on Google Colab
 
-You cannot “link” Colab to Cursor automatically — you **open the notebook once** and run all cells. Everything runs on Google’s **free GPU**.
+Use **only** this link (loads notebook from GitHub `main`):
 
-## Open in Colab (one click)
+**https://colab.research.google.com/github/sameedsaeed123/final-year-benzi/blob/main/fyp-ml-demos/finetune/BENZI_Colab_Train.ipynb**
 
-**After you push this repo to GitHub:**
+Do not use an old Colab tab or *File → Open* from a saved copy — always use the link above.
 
 [![](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sameedsaeed123/final-year-benzi/blob/main/fyp-ml-demos/finetune/BENZI_Colab_Train.ipynb)
-
-Or: [Google Colab](https://colab.research.google.com) → *File* → *Upload notebook* → choose:
-
-`fyp-ml-demos/finetune/BENZI_Colab_Train.ipynb`
 
 ## Steps in Colab
 
 1. **Runtime → Change runtime type → T4 GPU**
-2. **Run all cells** (Runtime → Run all) — ~2–3 hours total
-3. Download **`benzi-empathetic-trained.zip`** when prompted
+2. **Runtime → Run all** (~1 hour total; merge is 15–40 min — **do not press Stop**)
+3. Download **`benzi-empathetic-trained.zip`** when Cell 6 runs
+
+Uses `merge_lora_colab.py` (not `merge_lora.py`) and `requirements-finetune-colab.txt` (no numpy downgrade).
 
 ## On your Mac after download
 
