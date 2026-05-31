@@ -200,7 +200,6 @@ def main() -> None:
         fp16=use_4bit,
         optim="adamw_torch",
         warmup_ratio=0.03,
-        use_mps_device=False,
         no_cuda=(device != "cuda"),
     )
 
