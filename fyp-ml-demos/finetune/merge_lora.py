@@ -59,17 +59,25 @@ def main() -> None:
     model = model.merge_and_unload()
 
     out = Path(args.out)
+    if out.exists():
+        import shutil
+
+        shutil.rmtree(out)
     out.mkdir(parents=True, exist_ok=True)
-    print(
-        "Saving merged ~3B weights (~6GB) — often 10–25 min on Colab; "
-        "progress bar may sit at 0% while the first shard is written…"
-    )
+
+    import gc
+
+    print("Moving to CPU before save (use merge_lora_colab.py on Colab if this hangs)…")
+    model = model.cpu()
+    gc.collect()
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
+
+    print("Saving ~6GB in 500MB shards (15–40 min; do not Ctrl+C)…")
     model.save_pretrained(
         out,
         safe_serialization=True,
-        max_shard_size="2GB",
+        max_shard_size="500MB",
     )
     tokenizer.save_pretrained(out)
     print(f"Merged model saved to {out}")
