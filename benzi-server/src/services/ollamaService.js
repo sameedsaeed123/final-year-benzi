@@ -13,8 +13,13 @@ function defaultModel() {
 }
 
 function numCtx() {
-  const n = Number(process.env.OLLAMA_NUM_CTX || 4096)
-  return Number.isFinite(n) && n > 0 ? Math.min(n, 8192) : 4096
+  const n = Number(process.env.OLLAMA_NUM_CTX || 2048)
+  return Number.isFinite(n) && n > 0 ? Math.min(n, 4096) : 2048
+}
+
+function maxPredict() {
+  const n = Number(process.env.OLLAMA_MAX_TOKENS || 200)
+  return Number.isFinite(n) && n > 0 ? Math.min(n, 400) : 200
 }
 
 export function normalizeOllamaError(err) {
@@ -93,7 +98,7 @@ async function chatCompletion(messages, options = {}) {
       options: {
         num_ctx: numCtx(),
         temperature: options.temperature ?? 0.4,
-        num_predict: options.max_tokens ?? 512,
+        num_predict: options.max_tokens ?? maxPredict(),
       },
     }),
     signal: AbortSignal.timeout(options.timeoutMs ?? 120000),
@@ -114,16 +119,41 @@ async function chatCompletion(messages, options = {}) {
   return text.trim()
 }
 
+function envInt(name, fallback, max) {
+  const n = Number(process.env[name])
+  if (!Number.isFinite(n) || n <= 0) return fallback
+  return Math.min(n, max)
+}
+
+function trimContextForOllama(context) {
+  // When RAG already picked chunks, keep them; else allow more records for context
+  const ragActive = (context.records || []).some((r) => r.ragScore != null)
+  const historyLimit = envInt('OLLAMA_HISTORY_MESSAGES', 10, 14)
+  const recordLimit = ragActive
+    ? envInt('OLLAMA_MAX_RECORDS', 6, 8)
+    : envInt('OLLAMA_MAX_RECORDS', 5, 7)
+  const charsPerRecord = envInt('OLLAMA_RECORD_CHARS', 2400, 3500)
+
+  const chatHistory = (context.chatHistory || []).slice(-historyLimit)
+  const records = (context.records || []).slice(0, recordLimit).map((r) => ({
+    ...r,
+    extractedText: String(r.extractedText || '').slice(0, charsPerRecord),
+  }))
+  return { ...context, chatHistory, records }
+}
+
 export async function getAiChatResponse(_patientUserId, newUserMessage, context) {
   try {
+    const slim = trimContextForOllama(context)
     const messages = [
-      { role: 'system', content: buildSystemInstruction(context) },
-      ...historyToChatMessages(context.chatHistory),
+      { role: 'system', content: buildSystemInstruction(slim) },
+      ...historyToChatMessages(slim.chatHistory),
       { role: 'user', content: newUserMessage },
     ]
     return await chatCompletion(messages, {
-      max_tokens: 320,
-      temperature: 0.72,
+      max_tokens: maxPredict(),
+      temperature: 0.55,
+      timeoutMs: 90000,
     })
   } catch (err) {
     throw normalizeOllamaError(err)

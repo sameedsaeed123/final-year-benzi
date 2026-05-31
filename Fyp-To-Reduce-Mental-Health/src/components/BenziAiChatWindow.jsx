@@ -95,11 +95,12 @@ export default function BenziAiChatWindow() {
             createdAt: new Date().toISOString(),
           },
         ])
+        window.dispatchEvent(new CustomEvent('benzi-mood-updated'))
       } else {
         await loadHistory()
       }
     } catch (e) {
-      setError(e.message || 'AI chat failed. Check OpenRouter credits or API key.')
+      setError(e.message || 'AI chat failed. If using Ollama, keep the app open and try again.')
       setMessages((prev) => prev.filter((m) => m._id !== optimistic._id))
       setText(trimmed)
     } finally {

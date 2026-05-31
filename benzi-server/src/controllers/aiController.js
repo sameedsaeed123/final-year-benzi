@@ -81,7 +81,7 @@ export async function patientAiChat(req, res, next) {
       therapistForUsage = allowance?.therapistUserId
     }
 
-    let context = await buildPatientContext(patientUserId)
+    let context = await buildPatientContext(patientUserId, { ragQuery: text })
     if (therapistForUsage) {
       const sub = await getEffectiveSubscription(therapistForUsage)
       context = applyContextLimits(context, sub.limits)
@@ -136,6 +136,9 @@ export async function patientAiChat(req, res, next) {
         reply: aiResponse,
         sentiment: { score, label },
         crisis: crisis.isCrisis ? { isCrisis: true, severity: crisis.severity } : null,
+        rag: context.ragUsed
+          ? { used: true, chunks: context.ragChunkCount }
+          : { used: false },
       },
       'OK',
       200

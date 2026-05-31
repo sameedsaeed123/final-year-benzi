@@ -5,6 +5,7 @@ import { Record } from '../models/Record.js'
 import { AiMessage } from '../models/AiMessage.js'
 import { AiGoal } from '../models/AiGoal.js'
 import { extractPdfText } from './pdfRedactionService.js'
+import { isRagEnabled, searchPatientRecordsRag } from './vectorRagService.js'
 
 const MAX_RECORDS = 10
 const MAX_CHARS_PER_RECORD = 3500
@@ -55,17 +56,32 @@ async function extractRecordText(record) {
   return fallback
 }
 
-export async function buildPatientContext(patientUserId) {
+export async function buildPatientContext(patientUserId, options = {}) {
   const patient = await Patient.findOne({ userId: patientUserId })
     .populate('userId', 'firstName lastName email')
     .lean()
 
-  const recordDocs = await Record.find({ patientUserId, deletedAt: null })
-    .sort({ createdAt: -1 })
-    .limit(MAX_RECORDS)
-    .lean()
+  let records = []
+  let ragUsed = false
+  let ragChunkCount = 0
 
-  const records = []
+  if (isRagEnabled() && options.ragQuery) {
+    const ragHits = await searchPatientRecordsRag(patientUserId, options.ragQuery)
+    if (ragHits.length > 0) {
+      records = ragHits
+      ragUsed = true
+      ragChunkCount = ragHits.length
+    }
+  }
+
+  const recordDocs =
+    records.length > 0
+      ? []
+      : await Record.find({ patientUserId, deletedAt: null })
+          .sort({ createdAt: -1 })
+          .limit(MAX_RECORDS)
+          .lean()
+
   for (const record of recordDocs) {
     const extractedText = await extractRecordText(record)
     const hasPdfBody = extractedText.length >= 80 && !extractedText.startsWith('Title:')
@@ -111,5 +127,7 @@ export async function buildPatientContext(patientUserId) {
     timezone: patient?.timezone || 'UTC',
     recordCount: records.length,
     recordsWithPdfText: records.filter((r) => r.hasPdfBody).length,
+    ragUsed,
+    ragChunkCount,
   }
 }

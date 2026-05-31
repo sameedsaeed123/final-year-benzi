@@ -124,6 +124,39 @@ export async function runOpenRouterJson(userPrompt) {
   return JSON.parse(jsonStr)
 }
 
+/** Factual brief of patient PDFs for Ollama (hybrid helper only). */
+export async function summarizeRecordsBrief(records) {
+  const block = (records || [])
+    .slice(0, 6)
+    .map(
+      (r, i) =>
+        `--- Document ${i + 1}: ${r.title || 'Report'} (${r.type || 'file'}) ---\n${String(r.extractedText || r.description || '').slice(0, 2200)}`
+    )
+    .join('\n\n')
+
+  if (!block.trim()) return ''
+
+  return runWithModelFallback(
+    () => [
+      {
+        role: 'user',
+        content: `You prepare context for BENZI, a between-session mental wellness companion (NOT a therapist).
+
+Summarize the patient documents below in plain English for the companion AI.
+Rules:
+- Facts only from the text; do NOT diagnose or prescribe.
+- Max 280 words, short paragraphs or bullets.
+- Note medications, dates, and follow-ups if present.
+- End with: "Therapist must confirm anything clinical."
+
+DOCUMENTS:
+${block}`,
+      },
+    ],
+    { max_tokens: 450, temperature: 0.2 }
+  )
+}
+
 export async function getGoalRecommendations(_patientUserId, context, patientDraft = '') {
   const raw = await runWithModelFallback(
     () => [{ role: 'user', content: buildGoalRecommendationPrompt(context, patientDraft) }],

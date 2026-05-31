@@ -6,6 +6,7 @@ import { Patient } from '../models/Patient.js'
 import { User } from '../models/User.js'
 import { Appointment } from '../models/Appointment.js'
 import { processRecordForRedaction } from './pdfRedactionService.js'
+import { scheduleRecordRagIndex, deleteRecordFromRag } from './vectorRagService.js'
 
 function formatDate(d) {
   if (!d) return '—'
@@ -80,18 +81,22 @@ async function triggerRedactionForRecord(recordDoc, patientUser) {
 
     if (!redactedPath) {
       console.log('[recordService] Redaction not applicable for record', String(recordDoc._id))
-      await Record.findByIdAndUpdate(recordDoc._id, {
-        redactionStatus: 'NOT_APPLICABLE',
-        redactedFileUrl: null,
-      })
+      const na = await Record.findByIdAndUpdate(
+        recordDoc._id,
+        { redactionStatus: 'NOT_APPLICABLE', redactedFileUrl: null },
+        { new: true }
+      ).lean()
+      if (na) scheduleRecordRagIndex(na)
     } else {
       const redactedFileName = path.basename(redactedPath)
       const redactedFileUrl = `/api/files/records/${redactedFileName}`
       console.log('[recordService] Redaction complete for record', String(recordDoc._id), '→', redactedFileUrl)
-      await Record.findByIdAndUpdate(recordDoc._id, {
-        redactionStatus: 'DONE',
-        redactedFileUrl,
-      })
+      const updated = await Record.findByIdAndUpdate(
+        recordDoc._id,
+        { redactionStatus: 'DONE', redactedFileUrl },
+        { new: true }
+      ).lean()
+      if (updated) scheduleRecordRagIndex(updated)
     }
   } catch (err) {
     console.error('[recordService] Redaction failed for record', String(recordDoc._id), err.message)
@@ -324,6 +329,8 @@ export async function uploadRecord({ uploaderUserId, uploaderRole, patientUserId
       .select('firstName lastName email phone')
       .lean()
     void triggerRedactionForRecord(doc.toObject(), patientUser)
+  } else {
+    scheduleRecordRagIndex(doc.toObject())
   }
 
   return {
@@ -391,6 +398,7 @@ export async function deleteRecord(recordId, requestingUserId, requestingRole) {
   doc.deletedAt = new Date()
   doc.deletedByRole = requestingRole
   await doc.save()
+  void deleteRecordFromRag(doc._id)
   return { id: String(doc._id) }
 }
 

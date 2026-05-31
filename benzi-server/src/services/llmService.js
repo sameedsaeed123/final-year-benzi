@@ -6,6 +6,8 @@
 import * as openRouter from './openRouterService.js'
 import * as gemini from './geminiAiService.js'
 import * as ollama from './ollamaService.js'
+import { prepareContextForOllama } from './contextBriefService.js'
+import { getRagHealth } from './vectorRagService.js'
 
 function provider() {
   return (process.env.LLM_PROVIDER || 'openrouter').toLowerCase()
@@ -29,7 +31,8 @@ export function normalizeLlmError(err) {
 export async function getAiChatResponse(patientUserId, newUserMessage, context) {
   try {
     if (useOllama()) {
-      return await ollama.getAiChatResponse(patientUserId, newUserMessage, context)
+      const prepared = await prepareContextForOllama(patientUserId, context)
+      return await ollama.getAiChatResponse(patientUserId, newUserMessage, prepared)
     }
     if (useGoogle()) {
       return await gemini.getAiChatResponse(patientUserId, newUserMessage, context)
@@ -72,7 +75,15 @@ export async function checkLlmHealth() {
   const p = provider()
   if (useOllama()) {
     const health = await ollama.checkOllamaHealth()
-    return { provider: p, ...health }
+    const helper = (process.env.LLM_HELPER || '').toLowerCase()
+    const rag = await getRagHealth()
+    return {
+      provider: p,
+      ...health,
+      helper: helper === 'openrouter' && process.env.OPENROUTER_API_KEY ? 'openrouter' : 'none',
+      helperRole: helper === 'openrouter' ? 'compresses large reports before local chat' : null,
+      rag,
+    }
   }
   if (useGoogle()) {
     return {

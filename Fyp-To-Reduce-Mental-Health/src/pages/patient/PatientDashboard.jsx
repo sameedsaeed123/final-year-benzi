@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useSocket } from '../../context/SocketContext.jsx'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext.jsx'
@@ -23,6 +23,7 @@ import {
 } from 'recharts'
 import PatientSidebar from '../../components/PatientSidebar'
 import AnonymousMeetJoinModal from '../../components/AnonymousMeetJoinModal.jsx'
+import { sentimentToMoodLabel } from '../../lib/moodFromChat.js'
 
 const moodOptions = [
   { label: 'Happy', image: '/images/Vector.png' },
@@ -76,21 +77,31 @@ export default function PatientDashboard() {
   const [dash, setDash] = useState(null)
   const [meetJoin, setMeetJoin] = useState({ open: false, link: '', alias: '' })
 
-  useEffect(() => {
-    let cancelled = false
-    const load = async () => {
-      try {
-        const json = await api('/ai/dashboard/me', { method: 'GET' })
-        if (!cancelled && json.success && json.data) setDash(json.data)
-      } catch {
-        if (!cancelled) setDash(null)
+  const loadDashboard = useCallback(async () => {
+    try {
+      const json = await api('/ai/dashboard/me', { method: 'GET' })
+      if (json.success && json.data) {
+        setDash(json.data)
+        const fromChat = json.data.todayMood?.fromChat
+          ? sentimentToMoodLabel(json.data.todayMood.label)
+          : null
+        if (fromChat) setSelectedMood(fromChat)
       }
-    }
-    void load()
-    return () => {
-      cancelled = true
+    } catch {
+      setDash(null)
     }
   }, [])
+
+  useEffect(() => {
+    void loadDashboard()
+    const onMood = () => void loadDashboard()
+    window.addEventListener('benzi-mood-updated', onMood)
+    window.addEventListener('focus', onMood)
+    return () => {
+      window.removeEventListener('benzi-mood-updated', onMood)
+      window.removeEventListener('focus', onMood)
+    }
+  }, [loadDashboard])
 
   const scoreRadial = dash?.scoreRadial ?? defaultRadial
   const progressWeekly = dash?.weeklyTaskProgress ?? defaultWeekly
@@ -98,6 +109,11 @@ export default function PatientDashboard() {
   const progressBars = dash?.progressBars ?? defaultProgressBars
   const centerPct = dash?.progressCenterPct ?? 0
   const taskScore = dash?.taskScore ?? 0
+  const todayMood = dash?.todayMood
+  const moodFromChat = Boolean(todayMood?.fromChat)
+  const chatMoodHint = moodFromChat
+    ? `Detected from ${todayMood.messageCount} BENZI message${todayMood.messageCount === 1 ? '' : 's'} today (${todayMood.label})`
+    : 'Chat with BENZI AI to auto-detect mood from your messages'
 
   return (
     <>
@@ -171,7 +187,9 @@ export default function PatientDashboard() {
                   <div className="text-center">
                     <p className="text-[40px] font-extrabold text-[#0f3a2b]">{taskScore}</p>
                     <p className="text-sm text-[#555]">Your Total score is</p>
-                    <p className="mt-2 text-[12px] text-[#777]">Updated Nov Jan, 2026</p>
+                    <p className="mt-2 text-[12px] text-[#777]">
+                      {moodFromChat ? 'Includes BENZI chat sentiment' : 'Log mood via BENZI chat or goals'}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -180,10 +198,13 @@ export default function PatientDashboard() {
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div>
                     <p className="text-sm uppercase tracking-[0.2em] text-[#7d8b7d]">Track Your Mood</p>
-                    <h2 className="mt-3 text-[24px] font-semibold text-[#111]">Complete Today’s log!</h2>
+                    <h2 className="mt-3 text-[24px] font-semibold text-[#111]">
+                      {moodFromChat ? 'Today’s mood from chat' : 'Complete today’s log'}
+                    </h2>
                   </div>
                 </div>
-                <p className="mt-4 text-sm text-[#555]">How are you feeling?</p>
+                <p className="mt-4 text-sm text-[#555]">{chatMoodHint}</p>
+                <p className="mt-1 text-[12px] text-[#7d8b7d]">Or pick how you feel manually:</p>
                 <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
                   {moodOptions.map((mood) => (
                     <button

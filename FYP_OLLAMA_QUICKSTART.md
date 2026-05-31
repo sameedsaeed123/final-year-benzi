@@ -8,7 +8,36 @@
 ## Is Ollama required?
 
 - **For FYP demo / local ML:** Yes — install Ollama and set `LLM_PROVIDER=ollama`.
-- **For cloud dev:** No — keep `LLM_PROVIDER=openrouter` (current default).
+- **For daily dev (fast Mac):** No — keep `LLM_PROVIDER=openrouter` and run `npm run ollama:quit` so Ollama does not use RAM.
+
+**Mac 32 GB:** [benzi-server/docs/OLLAMA_HARDWARE.md](benzi-server/docs/OLLAMA_HARDWARE.md)  
+**Fine-tune datasets:** [benzi-server/docs/OLLAMA_FINETUNE_DATASETS.md](benzi-server/docs/OLLAMA_FINETUNE_DATASETS.md)
+
+## Stop Ollama while you work (Mac)
+
+```bash
+cd benzi-server
+npm run ollama:quit      # frees RAM — use while coding UI/API
+npm run ollama:start     # when you want to test BENZI AI again
+npm run ollama:unload    # unload model only, keep app open
+```
+
+## Fast first setup (Mac 32 GB)
+
+```bash
+cd benzi-server
+npm run ollama:pull-fast
+```
+
+In `.env`:
+
+```env
+LLM_PROVIDER=ollama
+OLLAMA_MODEL=llama3.2:3b
+OLLAMA_NUM_CTX=2048
+```
+
+Then `npm run ollama:start` and `npm run test:ollama`.
 
 ## 5-minute setup on Dell (8 GB RAM)
 

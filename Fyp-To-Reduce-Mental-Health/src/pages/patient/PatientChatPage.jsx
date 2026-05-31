@@ -127,8 +127,10 @@ export default function PatientChatPage() {
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[1.4fr_280px] max-[1280px]:grid-cols-1 items-start">
-          <div className="rounded-[30px] border border-black/5 bg-white shadow-sm overflow-hidden"
-            style={{ height: 'calc(100vh - 260px)', minHeight: '500px' }}>
+          <div
+            className="rounded-[30px] border border-black/5 bg-white shadow-sm overflow-hidden flex flex-col"
+            style={{ height: 'calc(100vh - 260px)', minHeight: '520px', maxHeight: 'calc(100dvh - 200px)' }}
+          >
             <div className="flex-shrink-0 px-4 pt-4 pb-3 border-b border-black/6 bg-[#f5f7f2]">
               <div
                 className="flex rounded-full p-1 bg-[#e4ebe4] border border-black/6"
@@ -168,10 +170,10 @@ export default function PatientChatPage() {
                 </button>
               </div>
             </div>
-            <div className="flex h-[calc(100%-60px)] min-h-0">
+            <div className="flex flex-1 min-h-0 overflow-hidden">
 
               {chatTab === 'benzi' ? (
-                <div className="flex-1 flex flex-col min-w-0 min-h-0">
+                <div className="flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden">
                   <BenziAiChatWindow />
                 </div>
               ) : (

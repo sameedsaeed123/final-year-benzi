@@ -2,6 +2,13 @@
 
 Use this when presenting **local ML inference** (Ollama) instead of cloud OpenRouter/Gemini.
 
+**Also read:**
+
+- [OLLAMA_HARDWARE.md](./OLLAMA_HARDWARE.md) — Mac vs Dell, **stop Ollama** so your laptop stays fast, fast Mac setup  
+- [OLLAMA_FINETUNE_DATASETS.md](./OLLAMA_FINETUNE_DATASETS.md) — empathy fine-tuning datasets (Mac 32 GB)  
+
+**npm scripts:** `ollama:quit` · `ollama:start` · `ollama:unload` · `ollama:pull-fast` · `test:ollama`
+
 ## Architecture
 
 ```

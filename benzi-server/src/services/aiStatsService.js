@@ -13,9 +13,10 @@ function clampPct(n) {
   return Math.min(100, Math.max(0, Math.round(n)))
 }
 
-function startOfUtcDay(d = new Date()) {
+/** Local calendar day (matches patient “today” for mood logs). */
+function startOfLocalDay(d = new Date()) {
   const x = new Date(d)
-  x.setUTCHours(0, 0, 0, 0)
+  x.setHours(0, 0, 0, 0)
   return x
 }
 
@@ -24,7 +25,7 @@ function dayName(date) {
 }
 
 export async function upsertTodayMoodLog(patientUserId, sentimentScore, sentimentLabel) {
-  const todayStart = startOfUtcDay()
+  const todayStart = startOfLocalDay()
   let log = await AiMoodLog.findOne({ patientUserId, date: todayStart })
   if (!log) {
     await AiMoodLog.create({
@@ -249,7 +250,34 @@ export async function getPatientAiDashboard(patientUserId) {
     }
   }
 
-  return { ...analytics, nextAppointment }
+  const todayStart = startOfLocalDay()
+  const todayLog =
+    analytics.moodLogs?.find((m) => {
+      const d = new Date(m.date)
+      return d >= todayStart && d < new Date(todayStart.getTime() + 86400000)
+    }) ||
+    (await AiMoodLog.findOne({ patientUserId, date: todayStart }).lean())
+
+  const sentimentCounts = analytics.sentimentCounts || { positive: 0, neutral: 0, negative: 0 }
+  const dominantMood =
+    todayLog?.dominantLabel ||
+    (sentimentCounts.negative > sentimentCounts.positive && sentimentCounts.negative > sentimentCounts.neutral
+      ? 'negative'
+      : sentimentCounts.positive > sentimentCounts.neutral
+        ? 'positive'
+        : 'neutral')
+
+  return {
+    ...analytics,
+    nextAppointment,
+    todayMood: {
+      label: dominantMood,
+      score: todayLog?.averageSentiment ?? 0,
+      messageCount: todayLog?.messageCount ?? 0,
+      fromChat: Boolean(todayLog?.messageCount),
+    },
+    dominantMood,
+  }
 }
 
 export async function getTherapistPatientAiSummary(patientUserId) {

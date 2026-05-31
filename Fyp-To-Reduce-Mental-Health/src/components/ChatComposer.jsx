@@ -19,8 +19,8 @@ export default function ChatComposer({
     'flex-1 rounded-full border border-black/10 bg-[#f5f9f5] px-5 py-2.5 text-[13px] text-[#1a2e22] outline-none focus:border-[#0f4e34] focus:ring-2 focus:ring-[#0f4e34]/15 transition disabled:opacity-60'
 
   return (
-    <div className="flex-shrink-0 px-4 py-3 bg-white border-t border-black/8">
-      <div className="flex items-center gap-2">
+    <div className="flex-shrink-0 px-4 pt-3 pb-4 pb-[max(1rem,env(safe-area-inset-bottom))] bg-white border-t border-black/8 shadow-[0_-4px_20px_rgba(0,0,0,0.04)]">
+      <div className="flex items-end gap-2">
         {multiline ? (
           <textarea
             rows={1}

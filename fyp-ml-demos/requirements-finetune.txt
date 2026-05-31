@@ -1,4 +1,5 @@
-# Fine-tuning (install on top of requirements.txt)
+# Fine-tuning on Intel Mac CPU (install on top of requirements.txt).
+# Colab: use requirements-finetune-colab.txt instead (keeps numpy 2.x).
 numpy<2
 datasets>=2.19.0
 peft>=0.11.0
