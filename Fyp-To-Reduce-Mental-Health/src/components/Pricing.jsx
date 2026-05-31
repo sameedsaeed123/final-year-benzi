@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import PlanPricingGrid from './PlanPricingGrid.jsx'
 import { api } from '../lib/api.js'
+import { useAuth } from '../context/AuthContext.jsx'
+import { planCtaHref } from '../lib/authPaths.js'
 
 const FALLBACK_PLANS = [
   {
@@ -48,6 +50,7 @@ const FALLBACK_PLANS = [
 ]
 
 export default function Pricing() {
+  const { user } = useAuth()
   const [billing, setBilling] = useState('Annual')
   const [plans, setPlans] = useState(FALLBACK_PLANS)
 
@@ -60,8 +63,7 @@ export default function Pricing() {
       .catch(() => {})
   }, [])
 
-  const planHref = (plan, interval) =>
-    `/therapist-checkout?plan=${plan.slug}&interval=${interval}`
+  const resolvePlanHref = (plan, interval) => planCtaHref(plan, user, interval)
 
   return (
     <section className="bg-cream py-20 px-6 max-[768px]:py-14 max-[480px]:py-10 max-[480px]:px-4">
@@ -94,7 +96,7 @@ export default function Pricing() {
           </div>
         </div>
 
-        <PlanPricingGrid billing={billing} plans={plans} ctaHref={planHref} />
+        <PlanPricingGrid billing={billing} plans={plans} ctaHref={resolvePlanHref} />
       </div>
     </section>
   )

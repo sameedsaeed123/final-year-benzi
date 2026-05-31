@@ -5,9 +5,7 @@ import AdminPagination from '../../components/AdminPagination.jsx'
 import AdminPageLoader from '../../components/AdminPageLoader.jsx'
 import AdminPanel from '../../components/AdminPanel.jsx'
 import { AdminAlert } from '../../components/AdminAlert.jsx'
-import { useAdminGet } from '../../hooks/useAdminQuery.js'
-
-import { paginateList, ADMIN_LIST_PAGE_SIZE } from '../../lib/adminPagination.js'
+import { useAdminPagedGet } from '../../hooks/useAdminQuery.js'
 
 const statusStyles = {
   Active: 'bg-[#e7f4ee] text-[#1f5f4a]',
@@ -17,40 +15,27 @@ const statusStyles = {
 }
 
 export default function AdminDoctorsPage() {
-  const { data, loading, error, setError } = useAdminGet('/admin/doctors')
-  const doctorsList = Array.isArray(data) ? data : []
+  const { data, loading, refreshing, error, setError, page, setPage, total, totalPages } =
+    useAdminPagedGet('/admin/doctors')
+  const doctorsList = data?.doctors || []
   const [searchQuery, setSearchQuery] = useState('')
-  const [currentPage, setCurrentPage] = useState(1)
-
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [searchQuery])
 
   const filteredDoctors = doctorsList.filter(
     (doc) =>
+      !searchQuery ||
       doc.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       doc.specialization?.toLowerCase().includes(searchQuery.toLowerCase())
   )
-  const {
-    items: paginatedDoctors,
-    totalPages,
-    currentPage: safePage,
-    totalItems,
-  } = paginateList(filteredDoctors, currentPage)
-
-  useEffect(() => {
-    if (currentPage > totalPages) setCurrentPage(totalPages)
-  }, [currentPage, totalPages])
 
   return (
     <AdminLayout activeItem="Doctors" title="Doctors">
       <p className="text-sm text-[#556b5b] -mt-2">Manage registered therapists and their subscription plans.</p>
       <AdminAlert type="error" message={error} onDismiss={() => setError('')} />
 
-      {loading ? (
+      {loading && !data ? (
         <AdminPageLoader label="Loading doctors…" />
       ) : (
-        <AdminPanel title="All doctors" subtitle={`${doctorsList.length} registered`}>
+        <AdminPanel title="All doctors" subtitle={`${total} registered`}>
           <div className="relative max-w-sm mb-4">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7d8b7d]" />
             <input
@@ -61,7 +46,7 @@ export default function AdminDoctorsPage() {
               className="w-full rounded-full border border-black/10 bg-[#f8faf8] py-2.5 pl-10 pr-4 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
             />
           </div>
-          <div className="overflow-x-auto -mx-5 px-5">
+          <div className={`overflow-x-auto -mx-5 px-5 transition-opacity ${refreshing ? 'opacity-50' : ''}`}>
             <table className="min-w-full border border-black/10 text-sm">
               <thead>
                 <tr className="text-left text-[11px] uppercase tracking-[0.15em] text-[#7d8b7d] bg-[#f7f4ef]">
@@ -74,8 +59,8 @@ export default function AdminDoctorsPage() {
                 </tr>
               </thead>
               <tbody>
-                {paginatedDoctors.length > 0 ? (
-                  paginatedDoctors.map((doctor) => (
+                {filteredDoctors.length > 0 ? (
+                  filteredDoctors.map((doctor) => (
                     <tr key={doctor.userId || doctor.id} className="text-[#3f4f41] hover:bg-[#fafbfa]">
                       <td className="px-3 py-3 border border-black/10 font-semibold">{doctor.id}</td>
                       <td className="px-3 py-3 border border-black/10 font-bold text-brand">{doctor.name}</td>
@@ -108,11 +93,10 @@ export default function AdminDoctorsPage() {
             </table>
           </div>
           <AdminPagination
-            currentPage={safePage}
+            currentPage={page}
             totalPages={totalPages}
-            totalItems={totalItems}
-            pageSize={ADMIN_LIST_PAGE_SIZE}
-            onPageChange={setCurrentPage}
+            totalItems={total}
+            onPageChange={setPage}
           />
         </AdminPanel>
       )}

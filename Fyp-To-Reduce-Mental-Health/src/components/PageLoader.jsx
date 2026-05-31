@@ -32,7 +32,7 @@ export default function PageLoader() {
           delayTimeout = setTimeout(() => {
             setAnimateOut(false)
             setVisible(true)
-          }, 150)
+          }, 80)
         }
       }
     }
@@ -51,8 +51,8 @@ export default function PageLoader() {
           fadeTimeout = setTimeout(() => {
             setVisible(false)
             setAnimateOut(false)
-          }, 400) // matches transition duration
-        }, 350)
+          }, 250)
+        }, 120)
       }
     }
 
@@ -72,7 +72,7 @@ export default function PageLoader() {
 
   return (
     <div
-      className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-cream/98 backdrop-blur-[6px] transition-opacity duration-400 ease-in-out ${
+      className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-cream/95 backdrop-blur-sm transition-opacity duration-250 ease-out ${
         animateOut ? 'opacity-0 pointer-events-none' : 'opacity-100'
       }`}
     >

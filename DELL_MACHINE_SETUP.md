@@ -285,31 +285,59 @@ First `npm install` installs `concurrently` at root to run API + website togethe
 
 ---
 
-## 9. Seed database (first time only)
+## 9. Database on Dell — copy your **current** DB (recommended)
 
-With MongoDB running:
+If your main PC or Atlas already has real users, appointments, chats, subscriptions, etc., **clone that database** to local Mongo on Dell. Logins stay the same.
+
+**Full guide:** [benzi-server/docs/COPY_DATABASE_TO_LOCAL.md](benzi-server/docs/COPY_DATABASE_TO_LOCAL.md)
+
+### On your **current** machine (where data lives today)
+
+1. In `benzi-server/.env`, set `MONGODB_URI` to your **existing** connection (Atlas or local).
+2. Install [MongoDB Database Tools](https://www.mongodb.com/try/download/database-tools) if needed.
+3. Export:
 
 ```bash
 cd benzi-server
-
-# Admin login for benzi-admin
-npm run seed:admin
-
-# Subscription plans (Try free, BENZI Pro, Plus)
-npm run seed:plans
-
-# Optional: demo therapists/patients/data
-npm run seed:demo
+npm run db:export
 ```
 
-**Default admin login** (after `seed:admin`):
+4. Zip `benzi-server/data/benzi-dump` and copy to Dell.
 
-| Field | Value |
-|-------|--------|
-| Email | `admin@benzi.local` |
-| Password | `ChangeMe!Admin1` |
+### On **Dell**
 
-Use at: http://localhost:5174/login
+1. Local Mongo running; `benzi-server/.env`:
+
+```env
+MONGODB_URI=mongodb://127.0.0.1:27017/benzi
+```
+
+2. Unzip dump to `benzi-server/data/benzi-dump/` (must contain `benzi/*.bson`).
+3. Import:
+
+```bash
+cd benzi-server
+npm run db:import
+```
+
+4. Start app — use your **real** admin/therapist/patient passwords (not demo seeds).
+
+**Do not** run `npm run seed:all` after a full import.
+
+---
+
+## 9b. Database on Dell — demo seeds only (empty DB)
+
+Only if you have **no** existing database to copy:
+
+```bash
+cd benzi-server
+npm run seed:all
+```
+
+Details: [benzi-server/docs/SEED_DATABASE.md](benzi-server/docs/SEED_DATABASE.md)
+
+Demo admin: `admin@benzi.local` / `ChangeMe!Admin1`
 
 ---
 
@@ -494,7 +522,7 @@ Restart API. Ollama not required.
 - [ ] `benzi-server/.env` created from `.env.example`
 - [ ] `LLM_PROVIDER=ollama` set in `.env`
 - [ ] `npm install` at root + benzi-server + website + admin
-- [ ] `npm run seed:admin` and `npm run seed:plans`
+- [ ] Current DB on Dell: `db:export` on main PC → `db:import` on Dell **or** `seed:all` if empty DB only
 - [ ] `npm run dev` from root → http://localhost:5173
 - [ ] `npm run test:ollama` passes
 - [ ] Admin at http://localhost:5174 with seed credentials

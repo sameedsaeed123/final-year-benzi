@@ -47,4 +47,5 @@ Quick reference for machines that receive the project zip (e.g. Dell laptop).
 
 ## Full setup guide
 
-See **[DELL_MACHINE_SETUP.md](DELL_MACHINE_SETUP.md)** for step-by-step install, `.env`, seeds, and troubleshooting.
+See **[DELL_MACHINE_SETUP.md](DELL_MACHINE_SETUP.md)** for step-by-step install, `.env`, seeds, and troubleshooting.  
+Copy existing DB: **[benzi-server/docs/COPY_DATABASE_TO_LOCAL.md](benzi-server/docs/COPY_DATABASE_TO_LOCAL.md)** · Demo seeds: **[SEED_DATABASE.md](benzi-server/docs/SEED_DATABASE.md)**.

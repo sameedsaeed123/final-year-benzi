@@ -12,6 +12,7 @@ import { listAppointmentsForAdmin } from '../services/appointmentService.js'
 import { processAppointmentCompletions } from '../services/appointmentCompletionService.js'
 import { getAdminSubscriptionStats } from '../services/adminRevenueService.js'
 import { invalidateAdminCache } from '../services/adminCacheService.js'
+import { parsePaginationQuery } from '../utils/pagination.js'
 
 // Helper to check if a date is within 7 days
 const isWithinWeek = (date) => {
@@ -24,8 +25,9 @@ const isWithinWeek = (date) => {
 export async function getAdminAppointments(req, res, next) {
   try {
     await processAppointmentCompletions()
-    const appointments = await listAppointmentsForAdmin()
-    return sendSuccess(res, { appointments, total: appointments.length }, 'OK', 200)
+    const { page, limit } = parsePaginationQuery(req.query)
+    const result = await listAppointmentsForAdmin({ page, limit })
+    return sendSuccess(res, result, 'OK', 200)
   } catch (e) {
     next(e)
   }
@@ -48,8 +50,17 @@ export async function getDashboardStats(req, res, next) {
     const patientsPrev = await User.countDocuments({ role: 'patient', createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } })
     const patientsDelta = patientsPrev > 0 ? ((patientsNew / patientsPrev) * 100).toFixed(1) : '5.1'
 
-    // Patients count per doctor (Dashboard table)
-    const doctorsList = await User.find({ role: 'therapist' }).lean()
+    // Patients count per doctor (Dashboard table) — paginated
+    const tablePagination = parsePaginationQuery({
+      page: req.query.patientsPage || req.query.page,
+      limit: req.query.patientsLimit || req.query.limit,
+    })
+    const totalTherapistsForTable = await User.countDocuments({ role: 'therapist' })
+    const doctorsList = await User.find({ role: 'therapist' })
+      .sort({ createdAt: -1 })
+      .skip(tablePagination.skip)
+      .limit(tablePagination.limit)
+      .lean()
     const patientsPerDoctor = []
 
     for (let i = 0; i < doctorsList.length; i++) {
@@ -79,7 +90,7 @@ export async function getDashboardStats(req, res, next) {
       const lastSessionDate = lastAppt ? new Date(lastAppt.date).toISOString().split('T')[0] : 'None'
 
       patientsPerDoctor.push({
-        id: i + 1,
+        id: tablePagination.skip + i + 1,
         doctorName: `Dr. ${doc.firstName} ${doc.lastName}`,
         specialization,
         totalPatients: assignedPatients.length,
@@ -130,6 +141,7 @@ export async function getDashboardStats(req, res, next) {
       activeSubscriptions: subscriptionStats.activeSubscriptions,
       planDistribution: subscriptionStats.planDistribution,
       revenueByPlan: subscriptionStats.revenueByPlan,
+      patientsTable: tablePagination.meta(totalTherapistsForTable),
     }, 'OK', 200)
   } catch (e) {
     next(e)
@@ -138,34 +150,49 @@ export async function getDashboardStats(req, res, next) {
 
 export async function getDoctorsList(req, res, next) {
   try {
-    const doctors = await User.find({ role: 'therapist' }).lean()
-    const result = []
+    const { page, limit, skip, meta } = parsePaginationQuery(req.query)
+    const filter = { role: 'therapist' }
+    const [doctors, total] = await Promise.all([
+      User.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      User.countDocuments(filter),
+    ])
 
-    for (let i = 0; i < doctors.length; i++) {
-      const doc = doctors[i]
-      const therapistProfile = await Therapist.findOne({ userId: doc._id }).lean()
-      const patientCount = await Patient.countDocuments({ assignedTherapistUserId: doc._id })
-      
+    const userIds = doctors.map((d) => d._id)
+    const { TherapistSubscription } = await import('../models/TherapistSubscription.js')
+
+    const [profiles, patientCounts, subs] = await Promise.all([
+      Therapist.find({ userId: { $in: userIds } }).lean(),
+      Patient.aggregate([
+        { $match: { assignedTherapistUserId: { $in: userIds } } },
+        { $group: { _id: '$assignedTherapistUserId', count: { $sum: 1 } } },
+      ]),
+      TherapistSubscription.find({ therapistUserId: { $in: userIds } })
+        .select('therapistUserId planName planSlug status')
+        .lean(),
+    ])
+
+    const profileByUser = Object.fromEntries(profiles.map((p) => [String(p.userId), p]))
+    const countByUser = Object.fromEntries(patientCounts.map((p) => [String(p._id), p.count]))
+    const subByUser = Object.fromEntries(subs.map((s) => [String(s.therapistUserId), s]))
+
+    const doctorsList = doctors.map((doc, i) => {
+      const uid = String(doc._id)
+      const therapistProfile = profileByUser[uid]
+      const sub = subByUser[uid]
       const status = isWithinWeek(doc.lastLoginAt) ? 'Active' : 'Inactive'
-
-      const { TherapistSubscription } = await import('../models/TherapistSubscription.js')
-      const sub = await TherapistSubscription.findOne({ therapistUserId: doc._id })
-        .select('planName planSlug status')
-        .lean()
-
-      result.push({
-        id: `#00${i + 1}`,
-        userId: String(doc._id),
+      return {
+        id: `#${String(skip + i + 1).padStart(3, '0')}`,
+        userId: uid,
         name: `Dr. ${doc.firstName} ${doc.lastName}`,
         specialization: therapistProfile?.specializationTitle || 'Counselor',
-        patients: patientCount,
+        patients: countByUser[uid] || 0,
         subscription: sub?.planName || sub?.planSlug || 'None',
         subscriptionStatus: sub?.status || 'none',
-        status: doc.status === 'SUSPENDED' ? 'Suspended' : status
-      })
-    }
+        status: doc.status === 'SUSPENDED' ? 'Suspended' : status,
+      }
+    })
 
-    return sendSuccess(res, result, 'OK', 200)
+    return sendSuccess(res, { doctors: doctorsList, ...meta(total) }, 'OK', 200)
   } catch (e) {
     next(e)
   }
@@ -173,7 +200,24 @@ export async function getDoctorsList(req, res, next) {
 
 export async function getTickets(req, res, next) {
   try {
-    const tickets = await Ticket.find().sort({ createdAt: -1 }).lean()
+    const { page, limit, skip, meta } = parsePaginationQuery(req.query)
+    const filter = {}
+    const tab = String(req.query.filter || req.query.tab || '').toLowerCase()
+    if (tab === 'open' || tab === 'pending') filter.status = 'Pending'
+    if (tab === 'resolved') filter.status = 'Completed'
+
+    let tickets = await Ticket.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean()
+    let total = await Ticket.countDocuments(filter)
+
+    if (tab === 'pending') {
+      const allPending = await Ticket.find({ status: 'Pending' }).sort({ createdAt: -1 }).lean()
+      const filtered = allPending.filter((t) => {
+        if (!t.replies?.length) return true
+        return t.replies[t.replies.length - 1].sender === 'user'
+      })
+      total = filtered.length
+      tickets = filtered.slice(skip, skip + limit)
+    }
 
     const openCount = await Ticket.countDocuments({ status: 'Pending' })
     
@@ -197,8 +241,9 @@ export async function getTickets(req, res, next) {
         openTickets: openCount,
         pendingReply: pendingReplyCount,
         resolvedToday: resolvedTodayCount,
-        avgResponse: '14m'
-      }
+        avgResponse: '14m',
+      },
+      ...meta(total),
     }, 'OK', 200)
   } catch (e) {
     next(e)
@@ -279,13 +324,22 @@ export async function updateTicketStatus(req, res, next) {
 
 export async function getPendingVerifications(req, res, next) {
   try {
-    const pendingTherapists = await Therapist.find({ verificationStatus: 'Pending' }).lean()
-    const result = []
+    const { page, limit, skip, meta } = parsePaginationQuery(req.query)
+    const filter = { verificationStatus: 'Pending' }
+    const [pendingTherapists, total] = await Promise.all([
+      Therapist.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      Therapist.countDocuments(filter),
+    ])
 
-    for (const term of pendingTherapists) {
-      const u = await User.findById(term.userId).lean()
-      if (u) {
-        result.push({
+    const userIds = pendingTherapists.map((t) => t.userId)
+    const users = await User.find({ _id: { $in: userIds } }).lean()
+    const userById = Object.fromEntries(users.map((u) => [String(u._id), u]))
+
+    const verifications = pendingTherapists
+      .map((term) => {
+        const u = userById[String(term.userId)]
+        if (!u) return null
+        return {
           id: term._id,
           userId: u._id,
           name: `Dr. ${u.firstName} ${u.lastName}`,
@@ -298,11 +352,12 @@ export async function getPendingVerifications(req, res, next) {
           degreeUrl: term.degreeUrl,
           experienceLetterUrl: term.experienceLetterUrl,
           cnicUrl: term.cnicUrl,
-          createdAt: term.createdAt
-        })
-      }
-    }
-    return sendSuccess(res, result, 'OK', 200)
+          createdAt: term.createdAt,
+        }
+      })
+      .filter(Boolean)
+
+    return sendSuccess(res, { verifications, ...meta(total) }, 'OK', 200)
   } catch (e) {
     next(e)
   }

@@ -4,6 +4,8 @@ import { Phone, Mail, UserRoundPlus, Menu, X, MessageCircle } from 'lucide-react
 import { useAuth } from '../context/AuthContext.jsx'
 import { useSocket } from '../context/SocketContext.jsx'
 import { api } from '../lib/api.js'
+import { portalLabel, trialEntryPath } from '../lib/authPaths.js'
+import PortalCtaLink from './PortalCtaLink.jsx'
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -21,6 +23,10 @@ export default function Navbar() {
   }, [user?.id, setUnread])
 
   const chatPath = user?.role === 'therapist' ? '/therapist-chat' : '/patient-chat'
+  const trialHref = trialEntryPath(user)
+  const trialLabel = user ? portalLabel(user.role) : 'Free Trial'
+  const trialBtnClass =
+    'shrink-0 inline-flex items-center justify-center bg-brand text-white rounded-full font-semibold whitespace-nowrap no-underline transition-all hover:bg-brand-dark hover:-translate-y-px px-3 py-2 text-[11px] sm:px-4 sm:py-2.5 sm:text-[12.5px] lg:px-6 lg:py-3 lg:text-[13.5px] lg:mr-1'
 
   const navItems = [
     { label: 'Home', to: '/' },
@@ -117,13 +123,13 @@ export default function Navbar() {
               </button>
             )}
 
-            {/* Free trial — visible on mobile + desktop */}
-            <Link
-              to="/subscription"
-              className="shrink-0 inline-flex items-center justify-center bg-brand text-white rounded-full font-semibold whitespace-nowrap no-underline transition-all hover:bg-brand-dark hover:-translate-y-px px-3 py-2 text-[11px] sm:px-4 sm:py-2.5 sm:text-[12.5px] lg:px-6 lg:py-3 lg:text-[13.5px] lg:mr-1"
+            <PortalCtaLink
+              href={trialHref}
+              className={trialBtnClass}
+              onClick={() => setMenuOpen(false)}
             >
-              Free Trial
-            </Link>
+              {trialLabel}
+            </PortalCtaLink>
 
             {/* Hamburger */}
             <button
@@ -171,13 +177,13 @@ export default function Navbar() {
                 )}
               </Link>
             )}
-            <Link
-              to="/subscription"
+            <PortalCtaLink
+              href={trialHref}
               className="block w-full text-center bg-brand text-white py-3 rounded-xl text-[15px] font-semibold no-underline transition-colors hover:bg-brand-dark"
               onClick={() => setMenuOpen(false)}
             >
-              Free Trial
-            </Link>
+              {trialLabel}
+            </PortalCtaLink>
           </div>
         )}
       </div>

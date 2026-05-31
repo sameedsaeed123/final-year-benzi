@@ -1,12 +1,19 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Send, Sparkles } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import { api } from '../lib/api.js'
 import { sanitizeChatReply } from '../lib/textSanitize.js'
+import { groupMessagesByDay } from '../lib/chatFormat.js'
 import ChatTypingIndicator from './ChatTypingIndicator.jsx'
+import ChatMessageRow, { ChatDayDivider } from './ChatMessageRow.jsx'
+import ChatComposer from './ChatComposer.jsx'
+import ChatPanelHeader from './ChatPanelHeader.jsx'
 
-function formatTime(d) {
-  if (!d) return ''
-  return new Date(d).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+function AiAvatar() {
+  return (
+    <div className="h-7 w-7 rounded-full bg-[#0f4e34] flex items-center justify-center flex-shrink-0 mb-1 text-white">
+      <Sparkles size={12} />
+    </div>
+  )
 }
 
 export default function BenziAiChatWindow() {
@@ -15,7 +22,20 @@ export default function BenziAiChatWindow() {
   const [loadingHistory, setLoadingHistory] = useState(true)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
-  const bottomRef = useRef(null)
+  const listRef = useRef(null)
+  const stickToBottomRef = useRef(true)
+
+  const scrollToBottom = useCallback((behavior = 'smooth') => {
+    const el = listRef.current
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior })
+  }, [])
+
+  const handleListScroll = useCallback(() => {
+    const el = listRef.current
+    if (!el) return
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+    stickToBottomRef.current = distanceFromBottom < 120
+  }, [])
 
   const loadHistory = useCallback(async () => {
     try {
@@ -34,8 +54,12 @@ export default function BenziAiChatWindow() {
   }, [loadHistory])
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, sending])
+    if (stickToBottomRef.current) scrollToBottom('smooth')
+  }, [messages, sending, scrollToBottom])
+
+  useEffect(() => {
+    if (!loadingHistory) scrollToBottom('auto')
+  }, [loadingHistory, scrollToBottom])
 
   const handleSend = async () => {
     const trimmed = text.trim()
@@ -47,6 +71,7 @@ export default function BenziAiChatWindow() {
       text: trimmed,
       createdAt: new Date().toISOString(),
     }
+    stickToBottomRef.current = true
     setMessages((prev) => [...prev, optimistic])
     setText('')
     setSending(true)
@@ -82,88 +107,71 @@ export default function BenziAiChatWindow() {
     }
   }
 
-  return (
-    <div className="flex flex-col h-full min-h-0 bg-[#fafaf8]">
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-black/8 bg-white">
-        <div className="h-10 w-10 rounded-full bg-[#0f4e34] flex items-center justify-center text-white">
-          <Sparkles size={18} />
-        </div>
-        <div>
-          <p className="text-[15px] font-semibold text-[#111]">BENZI AI</p>
-          <p className="text-[11px] text-[#7d8b7d]">Supports your therapy — not a replacement for your therapist</p>
-        </div>
-      </div>
+  const grouped = groupMessagesByDay(messages)
 
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-0">
+  return (
+    <div className="flex flex-col h-full min-h-0 bg-[#f8faf8]">
+      <ChatPanelHeader
+        title="BENZI AI"
+        subtitle="Supports your therapy — not a replacement for your therapist"
+        avatar={
+          <div className="h-10 w-10 rounded-full bg-[#0f4e34] flex items-center justify-center text-white flex-shrink-0">
+            <Sparkles size={18} />
+          </div>
+        }
+      />
+
+      <div ref={listRef} onScroll={handleListScroll} className="flex-1 overflow-y-auto px-4 py-4 space-y-3 min-h-0">
         {loadingHistory && (
-          <div className="py-6">
+          <div className="py-4">
             <ChatTypingIndicator variant="ai" label="Loading conversation…" />
           </div>
         )}
+
         {!loadingHistory && messages.length === 0 && (
-          <div className="text-center py-10 px-6">
-            <Sparkles size={32} className="mx-auto text-[#1f5f4a] mb-3" />
+          <div className="flex flex-col items-center justify-center py-14 px-6 text-center">
+            <div className="h-14 w-14 rounded-full bg-[#e8f3ea] flex items-center justify-center mb-4">
+              <Sparkles size={24} className="text-[#1f5f4a]" />
+            </div>
             <p className="text-[14px] font-semibold text-[#111]">Chat with BENZI</p>
-            <p className="text-[12px] text-[#7d8b7d] mt-2 leading-relaxed">
-              Ask about your reports in plain language. For diagnosis, meds, or big decisions — talk to your therapist; BENZI won't guess.
+            <p className="text-[12px] text-[#7d8b7d] mt-2 max-w-sm leading-relaxed">
+              Ask about your reports in plain language. For diagnosis, meds, or big decisions — talk to your therapist.
             </p>
           </div>
         )}
+
         {!loadingHistory &&
-          messages.map((msg) => {
-            const isPatient = msg.sender === 'patient'
+          grouped.map((item, idx) => {
+            if (item.type === 'day') {
+              return <ChatDayDivider key={`day-${idx}`} label={item.label} />
+            }
+            const isPatient = item.sender === 'patient'
+            const body = isPatient ? item.text : sanitizeChatReply(item.text)
             return (
-              <div key={msg._id} className={`flex ${isPatient ? 'justify-end' : 'justify-start'}`}>
-                <div
-                  className={`max-w-[85%] rounded-[18px] px-4 py-2.5 text-[13px] leading-relaxed shadow-sm ${
-                    isPatient
-                      ? 'bg-[#0f4e34] text-white rounded-br-[4px]'
-                      : 'bg-white border border-black/8 text-[#2a3d32] rounded-bl-[4px]'
-                  }`}
-                >
-                  <p className="whitespace-pre-wrap">{isPatient ? msg.text : sanitizeChatReply(msg.text)}</p>
-                  <p className={`text-[10px] mt-1 ${isPatient ? 'text-white/70' : 'text-[#9aaa9a]'}`}>
-                    {formatTime(msg.createdAt)}
-                  </p>
-                </div>
-              </div>
+              <ChatMessageRow
+                key={item._id}
+                isMe={isPatient}
+                text={body}
+                createdAt={item.createdAt}
+                avatar={!isPatient ? <AiAvatar /> : null}
+              />
             )
           })}
+
         {sending && <ChatTypingIndicator variant="ai" label="BENZI is typing" />}
-        <div ref={bottomRef} />
       </div>
 
       {error && (
         <p className="px-4 py-2 text-[12px] text-red-700 bg-red-50 border-t border-red-100">{error}</p>
       )}
 
-      <div className="flex-shrink-0 p-3 border-t border-black/10 bg-white">
-        <div className="flex items-end gap-2">
-          <textarea
-            rows={1}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                void handleSend()
-              }
-            }}
-            placeholder="Message BENZI AI…"
-            disabled={sending}
-            className="flex-1 resize-none rounded-2xl border border-black/10 bg-[#f8faf8] px-4 py-2.5 text-[14px] outline-none focus:border-[#0f4e34] focus:ring-2 focus:ring-[#0f4e34]/15 max-h-28 disabled:opacity-60"
-          />
-          <button
-            type="button"
-            onClick={() => void handleSend()}
-            disabled={sending || !text.trim()}
-            className="h-11 w-11 rounded-full bg-[#0f4e34] text-white flex items-center justify-center disabled:opacity-40 hover:bg-[#0d4530] transition"
-            aria-label="Send"
-          >
-            <Send size={18} />
-          </button>
-        </div>
-      </div>
+      <ChatComposer
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onSend={() => void handleSend()}
+        placeholder="Message BENZI AI…"
+        disabled={sending}
+      />
     </div>
   )
 }

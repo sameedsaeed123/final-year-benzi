@@ -7,6 +7,7 @@ import { displayFirstName } from '../../lib/userDisplay.js'
 import { api } from '../../lib/api.js'
 import AppointmentBookingModal from '../../components/AppointmentBookingModal.jsx'
 import AnonymousMeetJoinModal from '../../components/AnonymousMeetJoinModal.jsx'
+import ListPagination, { PAGE_SIZE } from '../../components/ListPagination.jsx'
 
 const statusStyles = {
   Pending: 'bg-[#f2f6f1] text-[#3d6c4d]',
@@ -20,6 +21,9 @@ export default function PatientAppointmentsPage() {
   const welcomeName = displayFirstName(user)
   const [appointments, setAppointments] = useState([])
   const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [listLoading, setListLoading] = useState(true)
   const [linkedDoctor, setLinkedDoctor] = useState(null)
   const [linkedLoading, setLinkedLoading] = useState(true)
   const [linkedError, setLinkedError] = useState('')
@@ -30,24 +34,32 @@ export default function PatientAppointmentsPage() {
   useEffect(() => {
     let cancelled = false
     const load = async () => {
+      setListLoading(true)
       try {
-        const json = await api('/appointments/patient/me', { method: 'GET' })
+        const json = await api(`/appointments/patient/me?page=${page}&limit=${PAGE_SIZE}`, {
+          method: 'GET',
+          silent: true,
+        })
         if (!cancelled && json.success && json.data) {
           setAppointments(json.data.appointments || [])
-          setTotal(typeof json.data.total === 'number' ? json.data.total : (json.data.appointments || []).length)
+          setTotal(json.data.total ?? 0)
+          setTotalPages(json.data.totalPages ?? 1)
         }
       } catch {
         if (!cancelled) {
           setAppointments([])
           setTotal(0)
+          setTotalPages(1)
         }
+      } finally {
+        if (!cancelled) setListLoading(false)
       }
     }
     void load()
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [page])
 
   useEffect(() => {
     let cancelled = false
@@ -83,9 +95,13 @@ export default function PatientAppointmentsPage() {
   }
 
   const reloadAppointments = async () => {
-    const json = await api('/appointments/patient/me', { method: 'GET' })
+    const json = await api(`/appointments/patient/me?page=${page}&limit=${PAGE_SIZE}`, {
+      method: 'GET',
+      silent: true,
+    })
     setAppointments(json.data?.appointments || [])
-    setTotal(typeof json.data?.total === 'number' ? json.data.total : (json.data?.appointments || []).length)
+    setTotal(json.data?.total ?? 0)
+    setTotalPages(json.data?.totalPages ?? 1)
   }
 
   const regenerateVideo = async (item) => {
@@ -190,7 +206,21 @@ export default function PatientAppointmentsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {appointments.map((item) => (
+                    {listLoading && (
+                      <tr>
+                        <td colSpan={8} className="px-3 py-8 text-center text-sm text-[#7d8b7d]">
+                          Loading appointments…
+                        </td>
+                      </tr>
+                    )}
+                    {!listLoading && appointments.length === 0 && (
+                      <tr>
+                        <td colSpan={8} className="px-3 py-8 text-center text-sm text-[#7d8b7d]">
+                          No appointments yet.
+                        </td>
+                      </tr>
+                    )}
+                    {!listLoading && appointments.map((item) => (
                       <tr key={item.id} className="">
                         <td className="px-3 py-4 border border-black/10 text-sm font-semibold text-[#111]">{item.id}</td>
                         <td className="px-3 py-4 border border-black/10 text-sm text-[#3f4f41]">{item.therapist}</td>
@@ -263,18 +293,12 @@ export default function PatientAppointmentsPage() {
                 </table>
               </div>
 
-              <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-black/10 pt-4 text-sm text-[#556b5b]">
-                <span>
-                  {total === 0 ? 'Showing 0 of 0 appointments' : `Showing 1-${total} of ${total} appointments`}
-                </span>
-                <div className="flex items-center gap-2">
-                  <button className="rounded-full border border-black/10 bg-white px-3 py-2 text-[#1f5f4a]">&lt;&lt;</button>
-                  <button className="rounded-full bg-[#0f4e34] px-4 py-2 text-sm font-semibold text-white">1</button>
-                  <button className="rounded-full border border-black/10 bg-white px-4 py-2">2</button>
-                  <button className="rounded-full border border-black/10 bg-white px-4 py-2">3</button>
-                  <button className="rounded-full border border-black/10 bg-white px-3 py-2 text-[#1f5f4a]">&gt;&gt;</button>
-                </div>
-              </div>
+              <ListPagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalItems={total}
+                onPageChange={setPage}
+              />
             </div>
 
             <div className="grid gap-4 lg:grid-cols-2">

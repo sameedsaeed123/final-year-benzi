@@ -7,7 +7,6 @@ import AdminPagination from '../../components/AdminPagination.jsx'
 import { AdminAlert } from '../../components/AdminAlert.jsx'
 import { api } from '../../lib/api.js'
 
-import { paginateList, ADMIN_LIST_PAGE_SIZE } from '../../lib/adminPagination.js'
 
 const statusStyles = {
   Active: 'bg-[#e7f4ee] text-[#1f5f4a]',
@@ -20,6 +19,8 @@ export default function AdminSubscriptionsPage() {
   const [assignments, setAssignments] = useState([])
   const [doctors, setDoctors] = useState([])
   const [currentPage, setCurrentPage] = useState(1)
+  const [assignmentTotal, setAssignmentTotal] = useState(0)
+  const [assignmentTotalPages, setAssignmentTotalPages] = useState(1)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -30,19 +31,21 @@ export default function AdminSubscriptionsPage() {
     billingInterval: 'monthly',
   })
 
-  const load = () => {
+  const load = (assignPage = currentPage) => {
     setLoading(true)
     setError('')
     return Promise.all([
       api('/admin/subscription/plans', { method: 'GET', silent: true }),
-      api('/admin/subscription/assignments', { method: 'GET', silent: true }),
-      api('/admin/doctors', { method: 'GET', silent: true }),
+      api(`/admin/subscription/assignments?page=${assignPage}&limit=5`, { method: 'GET', silent: true }),
+      api('/admin/doctors?page=1&limit=100', { method: 'GET', silent: true }),
     ])
       .then(([plansJson, assignJson, docsJson]) => {
         const planList = plansJson.data?.plans || []
         setPlans(planList)
         setAssignments(assignJson.data?.assignments || [])
-        const docList = Array.isArray(docsJson.data) ? docsJson.data : docsJson.data?.doctors || []
+        setAssignmentTotal(assignJson.data?.total ?? 0)
+        setAssignmentTotalPages(assignJson.data?.totalPages ?? 1)
+        const docList = docsJson.data?.doctors || []
         setDoctors(docList)
         if (!assignForm.planSlug && planList[0]) {
           setAssignForm((f) => ({ ...f, planSlug: planList[0].slug }))
@@ -53,8 +56,8 @@ export default function AdminSubscriptionsPage() {
   }
 
   useEffect(() => {
-    void load()
-  }, [])
+    void load(currentPage)
+  }, [currentPage])
 
   const assignPlan = async (e) => {
     e.preventDefault()
@@ -75,13 +78,6 @@ export default function AdminSubscriptionsPage() {
       setSaving(false)
     }
   }
-
-  const {
-    items: paginated,
-    totalPages,
-    currentPage: safePage,
-    totalItems: assignmentTotal,
-  } = paginateList(assignments, currentPage)
 
   const countByPlan = (slug) => assignments.filter((a) => a.planSlug === slug).length
 
@@ -212,7 +208,7 @@ export default function AdminSubscriptionsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {paginated.map((row) => (
+                  {assignments.map((row) => (
                     <tr key={row.id} className="border-t border-black/5">
                       <td className="p-3">
                         <p className="font-semibold">{row.doctor}</p>
@@ -251,10 +247,9 @@ export default function AdminSubscriptionsPage() {
               <p className="p-6 text-[#7d8b7d] text-sm">No therapist subscriptions yet.</p>
             )}
             <AdminPagination
-              currentPage={safePage}
-              totalPages={totalPages}
+              currentPage={currentPage}
+              totalPages={assignmentTotalPages}
               totalItems={assignmentTotal}
-              pageSize={ADMIN_LIST_PAGE_SIZE}
               onPageChange={setCurrentPage}
             />
           </>

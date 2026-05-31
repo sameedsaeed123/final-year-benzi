@@ -1,6 +1,8 @@
 # BENZI — Ollama on your Dell laptop (quick start)
 
-> **New machine?** Full install (MongoDB, Node, zip, admin, seeds): **[DELL_MACHINE_SETUP.md](DELL_MACHINE_SETUP.md)**  
+> **New machine?** Full install (MongoDB, Node, zip, admin): **[DELL_MACHINE_SETUP.md](DELL_MACHINE_SETUP.md)**  
+> **Copy your current DB to Dell:** `db:export` → `db:import` — **[COPY_DATABASE_TO_LOCAL.md](benzi-server/docs/COPY_DATABASE_TO_LOCAL.md)**  
+> **Demo data only:** `npm run seed:all` — **[SEED_DATABASE.md](benzi-server/docs/SEED_DATABASE.md)**  
 > Requirements only: **[REQUIREMENTS.md](REQUIREMENTS.md)**
 
 ## Is Ollama required?

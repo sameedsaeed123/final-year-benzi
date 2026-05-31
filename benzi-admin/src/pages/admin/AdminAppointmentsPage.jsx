@@ -1,13 +1,10 @@
-import { useState } from 'react'
-import { ExternalLink, Video } from 'lucide-react'
 import AdminLayout from '../../components/AdminLayout.jsx'
 import AdminPagination from '../../components/AdminPagination.jsx'
 import AdminPageLoader from '../../components/AdminPageLoader.jsx'
 import AdminPanel from '../../components/AdminPanel.jsx'
 import { AdminAlert } from '../../components/AdminAlert.jsx'
-import { useAdminGet } from '../../hooks/useAdminQuery.js'
-
-import { paginateList, ADMIN_LIST_PAGE_SIZE } from '../../lib/adminPagination.js'
+import { useAdminPagedGet } from '../../hooks/useAdminQuery.js'
+import { ExternalLink, Video } from 'lucide-react'
 
 const statusStyles = {
   Pending: 'bg-[#f2f6f1] text-[#3d6c4d]',
@@ -17,28 +14,30 @@ const statusStyles = {
 }
 
 export default function AdminAppointmentsPage() {
-  const { data, loading, error, setError } = useAdminGet('/admin/appointments')
-  const appointments = data?.appointments || []
-  const total = data?.total ?? appointments.length
-  const [currentPage, setCurrentPage] = useState(1)
-
   const {
-    items: paginatedAppointments,
+    data,
+    loading,
+    refreshing,
+    error,
+    setError,
+    page,
+    setPage,
+    total,
     totalPages,
-    currentPage: safePage,
-    totalItems: pageTotal,
-  } = paginateList(appointments, currentPage)
+  } = useAdminPagedGet('/admin/appointments')
+
+  const appointments = data?.appointments || []
 
   return (
     <AdminLayout activeItem="Appointments" title="Appointments">
       <p className="text-sm text-[#556b5b] -mt-2">All platform appointments — video links and status.</p>
       <AdminAlert type="error" message={error} onDismiss={() => setError('')} />
 
-      {loading ? (
+      {loading && !data ? (
         <AdminPageLoader label="Loading appointments…" />
       ) : (
         <AdminPanel title="All appointments" subtitle={`${total} total`}>
-          <div className="overflow-x-auto -mx-5 px-5">
+          <div className={`overflow-x-auto -mx-5 px-5 transition-opacity ${refreshing ? 'opacity-50' : ''}`}>
             <table className="min-w-full border border-black/10 text-[13px]">
               <thead>
                 <tr className="text-left text-[11px] uppercase tracking-[0.15em] text-[#7d8b7d] bg-[#f7f4ef]">
@@ -59,7 +58,7 @@ export default function AdminAppointmentsPage() {
                     </td>
                   </tr>
                 ) : (
-                  paginatedAppointments.map((row) => (
+                  appointments.map((row) => (
                     <tr key={row.fullId || row.id} className="text-[#3f4f41] hover:bg-[#fafbfa]">
                       <td className="px-3 py-3 border border-black/10 font-semibold">{row.id}</td>
                       <td className="px-3 py-3 border border-black/10">{row.patient}</td>
@@ -97,20 +96,13 @@ export default function AdminAppointmentsPage() {
               </tbody>
             </table>
           </div>
-          {appointments.length > 0 && (
-            <>
-              <p className="mt-4 text-[12px] text-[#7d8b7d]">
-                Showing {paginatedAppointments.length} of {total}. Confirmed sessions auto-complete
-                after end time.
-              </p>
-              <AdminPagination
-                currentPage={safePage}
-                totalPages={totalPages}
-                totalItems={pageTotal}
-                pageSize={ADMIN_LIST_PAGE_SIZE}
-                onPageChange={setCurrentPage}
-              />
-            </>
+          {total > 0 && (
+            <AdminPagination
+              currentPage={page}
+              totalPages={totalPages}
+              totalItems={total}
+              onPageChange={setPage}
+            />
           )}
         </AdminPanel>
       )}

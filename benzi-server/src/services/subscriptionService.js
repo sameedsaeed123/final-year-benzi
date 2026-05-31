@@ -167,13 +167,20 @@ export async function incrementCouponRedemption(code) {
   await Coupon.updateOne({ code: String(code).toUpperCase() }, { $inc: { timesRedeemed: 1 } })
 }
 
-export async function listTherapistAssignments() {
-  const subs = await TherapistSubscription.find().sort({ updatedAt: -1 }).lean()
+export async function listTherapistAssignments({ page = 1, limit = 5 } = {}) {
+  const skip = (page - 1) * limit
+  const [subs, total] = await Promise.all([
+    TherapistSubscription.find().sort({ updatedAt: -1 }).skip(skip).limit(limit).lean(),
+    TherapistSubscription.countDocuments(),
+  ])
   const { User } = await import('../models/User.js')
-  const out = []
-  for (const s of subs) {
-    const user = await User.findById(s.therapistUserId).select('firstName lastName email').lean()
-    out.push({
+  const userIds = subs.map((s) => s.therapistUserId)
+  const users = await User.find({ _id: { $in: userIds } }).select('firstName lastName email').lean()
+  const userById = Object.fromEntries(users.map((u) => [String(u._id), u]))
+
+  const assignments = subs.map((s) => {
+    const user = userById[String(s.therapistUserId)]
+    return {
       id: String(s._id),
       therapistUserId: String(s.therapistUserId),
       doctor: user ? `Dr. ${user.firstName} ${user.lastName}`.trim() : 'Unknown',
@@ -186,7 +193,12 @@ export async function listTherapistAssignments() {
       status: s.status === 'active' ? 'Active' : s.status === 'canceled' ? 'Inactive' : 'Pending',
       amountPaid: (s.amountPaidCents || 0) / 100,
       limits: s.limits || null,
-    })
+    }
+  })
+
+  return {
+    assignments,
+    total,
+    totalPages: Math.max(1, Math.ceil(total / limit) || 1),
   }
-  return out
 }

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, Lock, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
-import { dashboardPath } from '../lib/authPaths.js'
+import { goToPortal } from '../lib/authPaths.js'
 
 export default function ChangePasswordForcePage() {
   const { user, refreshSession } = useAuth()
@@ -59,7 +59,7 @@ export default function ChangePasswordForcePage() {
         // Refresh local session state to update isTemporaryPassword flag
         await refreshSession()
         setTimeout(() => {
-          navigate(dashboardPath(user.role), { replace: true })
+          goToPortal(navigate, user.role, { replace: true })
         }, 1500)
       } else {
         setError(res.message || 'Failed to change password. Please check your current temporary password.')

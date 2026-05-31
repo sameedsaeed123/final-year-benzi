@@ -3,3 +3,4 @@ node_modules
 *.log
 THERAPIST_SEED_CREDENTIALS.md
 uploads/
+data/

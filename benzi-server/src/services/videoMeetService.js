@@ -1,4 +1,4 @@
-i/**
+/**
  * Anonymous sessions use Jitsi (not Google Meet):
  * - Patient link: mic only, camera button hidden, display name "Anonymous"
  * - Therapist link: full camera + mic (join first to moderate the room)
@@ -62,4 +62,3 @@ export function isGoogleMeetUrl(url) {
 export function isJitsiUrl(url) {
   return typeof url === 'string' && (url.includes('meet.jit.si') || url.includes('jitsi'))
 }
-th

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
-import { dashboardPath, canAccessPath } from '../lib/authPaths.js'
+import { canAccessPath, portalUrl, isExternalPortalHref, goToPortal } from '../lib/authPaths.js'
 
 function portalFromParam(p) {
   if (p === 'therapist' || p === 'patient') return p
@@ -17,7 +17,7 @@ export default function LoginPage() {
   const [remember, setRemember] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
-  const { login } = useAuth()
+  const { login, user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const update = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
@@ -25,6 +25,16 @@ export default function LoginPage() {
   useEffect(() => {
     setPortal(portalFromParam(searchParams.get('portal')))
   }, [searchParams])
+
+  useEffect(() => {
+    if (authLoading || !user?.role) return
+    const dest = portalUrl(user.role)
+    if (isExternalPortalHref(dest)) {
+      window.location.replace(dest)
+      return
+    }
+    navigate(dest, { replace: true })
+  }, [authLoading, user, navigate])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -56,7 +66,7 @@ export default function LoginPage() {
       ) {
         navigate(from, { replace: true })
       } else {
-        navigate(dashboardPath(user.role), { replace: true })
+        goToPortal(navigate, user.role, { replace: true })
       }
     } catch (err) {
       const detail =

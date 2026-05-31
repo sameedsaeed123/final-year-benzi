@@ -1,31 +1,19 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import AdminPagination from '../../components/AdminPagination.jsx'
-import { paginateList, ADMIN_LIST_PAGE_SIZE } from '../../lib/adminPagination.js'
 import { Check, X, Loader2, FileText, ExternalLink, UserCheck } from 'lucide-react'
 import AdminLayout from '../../components/AdminLayout.jsx'
 import AdminPageLoader from '../../components/AdminPageLoader.jsx'
 import AdminPanel from '../../components/AdminPanel.jsx'
 import { AdminAlert } from '../../components/AdminAlert.jsx'
-import { useAdminGet } from '../../hooks/useAdminQuery.js'
+import { useAdminPagedGet } from '../../hooks/useAdminQuery.js'
 import { api } from '../../lib/api.js'
 
 export default function AdminVerificationsPage() {
-  const { data: requests, loading, error, setError, reload } = useAdminGet('/admin/pending-verifications')
+  const { data, loading, error, setError, reload, page, setPage, total, totalPages } =
+    useAdminPagedGet('/admin/pending-verifications')
+  const list = data?.verifications || []
   const [actioningId, setActioningId] = useState(null)
   const [success, setSuccess] = useState('')
-
-  const list = Array.isArray(requests) ? requests : []
-  const [listPage, setListPage] = useState(1)
-  const {
-    items: paginatedList,
-    totalPages: listTotalPages,
-    currentPage: listSafePage,
-    totalItems: listTotal,
-  } = paginateList(list, listPage)
-
-  useEffect(() => {
-    setListPage(1)
-  }, [list.length])
 
   const handleDecision = async (id, approve) => {
     setError('')
@@ -56,9 +44,9 @@ export default function AdminVerificationsPage() {
       <AdminAlert type="error" message={error} onDismiss={() => setError('')} />
       <AdminAlert type="success" message={success} onDismiss={() => setSuccess('')} />
 
-      {loading ? (
+      {loading && !data ? (
         <AdminPageLoader label="Loading verification requests…" />
-      ) : list.length === 0 ? (
+      ) : total === 0 ? (
         <AdminPanel>
           <div className="flex flex-col items-center py-8 text-center">
             <div className="mb-4 rounded-full bg-[#e7f4ee] p-4 text-brand">
@@ -72,7 +60,7 @@ export default function AdminVerificationsPage() {
         </AdminPanel>
       ) : (
         <div className="space-y-4">
-          {paginatedList.map((req) => (
+          {list.map((req) => (
             <AdminPanel key={req.id} className="!p-0">
               <div className="p-5 flex flex-col lg:flex-row lg:items-start justify-between gap-6">
                 <div className="space-y-4 flex-1 min-w-0">
@@ -163,11 +151,10 @@ export default function AdminVerificationsPage() {
             </AdminPanel>
           ))}
           <AdminPagination
-            currentPage={listSafePage}
-            totalPages={listTotalPages}
-            totalItems={listTotal}
-            pageSize={ADMIN_LIST_PAGE_SIZE}
-            onPageChange={setListPage}
+            currentPage={page}
+            totalPages={totalPages}
+            totalItems={total}
+            onPageChange={setPage}
           />
         </div>
       )}

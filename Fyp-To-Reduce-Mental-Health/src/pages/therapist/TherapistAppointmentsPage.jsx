@@ -5,6 +5,7 @@ import TherapistSidebar from '../../components/TherapistSidebar'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { displayFirstName } from '../../lib/userDisplay.js'
 import { api } from '../../lib/api.js'
+import ListPagination, { PAGE_SIZE } from '../../components/ListPagination.jsx'
 
 const statusStyles = {
 	Confirmed: 'bg-[#e7f1e8] text-[#1f5f4a]',
@@ -148,6 +149,9 @@ export default function TherapistAppointmentsPage() {
 	const welcomeName = displayFirstName(user)
 	const [appointments, setAppointments] = useState([])
 	const [total, setTotal] = useState(0)
+	const [page, setPage] = useState(1)
+	const [totalPages, setTotalPages] = useState(1)
+	const [listLoading, setListLoading] = useState(true)
 	const [search, setSearch] = useState('')
 	const [savingId, setSavingId] = useState(null)
 	const [error, setError] = useState('')
@@ -182,17 +186,25 @@ export default function TherapistAppointmentsPage() {
 	}
 
 	const load = useCallback(async () => {
+		setListLoading(true)
 		try {
-			const json = await api('/appointments/therapist/me', { method: 'GET' })
+			const json = await api(`/appointments/therapist/me?page=${page}&limit=${PAGE_SIZE}`, {
+				method: 'GET',
+				silent: true,
+			})
 			if (json.success && json.data) {
 				setAppointments(json.data.appointments || [])
-				setTotal(typeof json.data.total === 'number' ? json.data.total : (json.data.appointments || []).length)
+				setTotal(json.data.total ?? 0)
+				setTotalPages(json.data.totalPages ?? 1)
 			}
 		} catch {
 			setAppointments([])
 			setTotal(0)
+			setTotalPages(1)
+		} finally {
+			setListLoading(false)
 		}
-	}, [])
+	}, [page])
 
 	useEffect(() => {
 		void loadGoogleStatus()
@@ -327,14 +339,21 @@ export default function TherapistAppointmentsPage() {
 										</tr>
 									</thead>
 									<tbody>
-										{filtered.length === 0 && (
+										{listLoading && (
 											<tr>
 												<td colSpan={8} className="px-3 py-6 text-center text-sm text-[#7d8b7d]">
-													{search ? 'No appointments match your search.' : 'No appointments yet.'}
+													Loading appointments…
 												</td>
 											</tr>
 										)}
-										{filtered.map((item) => (
+										{!listLoading && filtered.length === 0 && (
+											<tr>
+												<td colSpan={8} className="px-3 py-6 text-center text-sm text-[#7d8b7d]">
+													{search ? 'No appointments on this page match your search.' : 'No appointments yet.'}
+												</td>
+											</tr>
+										)}
+										{!listLoading && filtered.map((item) => (
 											<tr key={item.id} className="text-sm text-[#3f4f41]">
 												<td className="px-3 py-4 border border-black/10 font-semibold text-[#111]">{item.id}</td>
 												<td className="px-3 py-4 border border-black/10">{item.patient}</td>
@@ -398,11 +417,12 @@ export default function TherapistAppointmentsPage() {
 								</table>
 							</div>
 
-							<div className="mt-6 flex flex-wrap items-center justify-center gap-2 text-sm text-[#556b5b]">
-								<span className="mr-auto max-[1280px]:mr-0">
-									{total === 0 ? 'Showing 0 of 0 appointments' : `Showing 1-${filtered.length} of ${total} appointments`}
-								</span>
-							</div>
+							<ListPagination
+								currentPage={page}
+								totalPages={totalPages}
+								totalItems={total}
+								onPageChange={setPage}
+							/>
 						</div>
 					</div>
 

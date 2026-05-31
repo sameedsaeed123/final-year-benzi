@@ -13,6 +13,7 @@ import {
 import { sendSuccess, sendError } from '../utils/responseUtils.js'
 import { syncCouponToStripe, syncPlanToStripe } from '../services/stripeService.js'
 import { invalidateAdminCache } from '../services/adminCacheService.js'
+import { parsePaginationQuery } from '../utils/pagination.js'
 
 export async function adminListPlans(req, res, next) {
   try {
@@ -63,8 +64,12 @@ export async function adminUpdatePlan(req, res, next) {
 
 export async function adminListCoupons(req, res, next) {
   try {
-    const coupons = await Coupon.find().sort({ createdAt: -1 }).lean()
-    return sendSuccess(res, { coupons }, 'OK', 200)
+    const { page, limit, skip, meta } = parsePaginationQuery(req.query)
+    const [coupons, total] = await Promise.all([
+      Coupon.find().sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      Coupon.countDocuments(),
+    ])
+    return sendSuccess(res, { coupons, ...meta(total) }, 'OK', 200)
   } catch (e) {
     next(e)
   }
@@ -126,8 +131,9 @@ export async function adminUpdateCoupon(req, res, next) {
 
 export async function adminListAssignments(req, res, next) {
   try {
-    const assignments = await listTherapistAssignments()
-    return sendSuccess(res, { assignments }, 'OK', 200)
+    const { page, limit } = parsePaginationQuery(req.query)
+    const { assignments, total, totalPages } = await listTherapistAssignments({ page, limit })
+    return sendSuccess(res, { assignments, total, page, limit, totalPages }, 'OK', 200)
   } catch (e) {
     next(e)
   }
@@ -185,7 +191,7 @@ export async function adminAssignSubscription(req, res, next) {
       amountPaidCents: billingInterval === 'free' ? 0 : amountPaidCents,
     })
 
-    const assignments = await listTherapistAssignments()
+    const { assignments } = await listTherapistAssignments({ page: 1, limit: 5 })
     await invalidateAdminCache()
     return sendSuccess(res, { assignments }, 'Subscription assigned', 200)
   } catch (e) {

@@ -16,6 +16,9 @@
     "diagnose:mongo": "node src/scripts/diagnoseMongo.mjs",
     "test:ollama": "node src/scripts/test-ollama.mjs",
     "seed:plans": "node src/scripts/seedSubscriptionPlans.js",
+    "seed:all": "npm run seed:plans && npm run seed:admin && npm run seed:therapists && npm run seed:demo",
+    "db:export": "node src/scripts/dbExport.mjs",
+    "db:import": "node src/scripts/dbImport.mjs",
     "stripe:sync-plans": "node src/scripts/syncStripePlans.mjs"
   },
   "dependencies": {

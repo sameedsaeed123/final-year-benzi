@@ -7,12 +7,14 @@ import { ensureMeetLinkForAppointment } from '../services/googleCalendarService.
 import mongoose from 'mongoose'
 import { createAppointmentSchema, patchAppointmentSchema, availabilityQuerySchema } from '../validators/appointmentValidators.js'
 import { getLinkedTherapistForPatient } from '../services/patientService.js'
+import { parsePaginationQuery } from '../utils/pagination.js'
 
 export async function patientAppointments(req, res, next) {
   try {
     await processAppointmentCompletions()
-    const rows = await listAppointmentsForPatient(req.user.id)
-    return sendSuccess(res, { appointments: rows, total: rows.length }, 'OK', 200)
+    const { page, limit } = parsePaginationQuery(req.query)
+    const result = await listAppointmentsForPatient(req.user.id, { page, limit })
+    return sendSuccess(res, result, 'OK', 200)
   } catch (e) {
     next(e)
   }
@@ -21,8 +23,9 @@ export async function patientAppointments(req, res, next) {
 export async function therapistAppointments(req, res, next) {
   try {
     await processAppointmentCompletions()
-    const rows = await listAppointmentsForTherapist(req.user.id)
-    return sendSuccess(res, { appointments: rows, total: rows.length }, 'OK', 200)
+    const { page, limit } = parsePaginationQuery(req.query)
+    const result = await listAppointmentsForTherapist(req.user.id, { page, limit })
+    return sendSuccess(res, result, 'OK', 200)
   } catch (e) {
     next(e)
   }

@@ -1,5 +1,5 @@
-import { Link } from 'react-router-dom'
 import { CheckCircle2, ArrowRight } from 'lucide-react'
+import PortalCtaLink from './PortalCtaLink.jsx'
 
 /** Original BENZI pricing card layout — data from API, visuals unchanged. */
 export default function PlanPricingGrid({
@@ -80,8 +80,8 @@ export default function PlanPricingGrid({
                   <ArrowRight size={16} strokeWidth={2.25} />
                 </span>
               ) : (
-                <Link
-                  to={ctaHref(plan, isAnnual ? 'yearly' : 'monthly')}
+                <PortalCtaLink
+                  href={ctaHref(plan, isAnnual ? 'yearly' : 'monthly')}
                   className={[
                     'w-full inline-flex items-center justify-center gap-2 rounded-lg py-3 text-[15px] font-semibold cursor-pointer transition-all hover:-translate-y-px',
                     isFeatured
@@ -89,9 +89,9 @@ export default function PlanPricingGrid({
                       : 'bg-white text-brand hover:bg-white/90',
                   ].join(' ')}
                 >
-                  Get Started
+                  {plan.slug === 'try-free' ? 'Try for Free' : 'Get Started'}
                   <ArrowRight size={16} strokeWidth={2.25} />
-                </Link>
+                </PortalCtaLink>
               )}
             </div>
           </div>

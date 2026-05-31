@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
-import { dashboardPath } from '../lib/authPaths.js'
+import { goToPortal } from '../lib/authPaths.js'
 
 export default function RegisterPage() {
   const [searchParams] = useSearchParams()
@@ -51,7 +51,7 @@ export default function RegisterPage() {
         },
         false
       )
-      navigate(dashboardPath(user.role), { replace: true })
+      goToPortal(navigate, user.role, { replace: true })
     } catch (err) {
       const msg =
         err.errors?.map((x) => x.message).join(' ') || err.message || 'Registration failed'

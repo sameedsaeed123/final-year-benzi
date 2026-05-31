@@ -2,6 +2,7 @@ import { Appointment } from '../models/Appointment.js'
 import { User } from '../models/User.js'
 import { Therapist } from '../models/Therapist.js'
 import { Patient } from '../models/Patient.js'
+import { DEFAULT_LIST_PAGE_SIZE } from '../utils/pagination.js'
 
 function statusUi(s) {
   const m = { PENDING: 'Pending', CONFIRMED: 'Confirmed', COMPLETED: 'Completed', CANCELLED: 'Cancelled' }
@@ -75,11 +76,22 @@ async function getAnonymousMap(patientUserIds) {
   )
 }
 
-export async function listAppointmentsForPatient(patientUserId) {
-  const list = await Appointment.find({ patientUserId })
-    .sort({ date: -1 })
-    .limit(100)
-    .lean()
+function paginationMeta(page, limit, total) {
+  return {
+    page,
+    limit,
+    total,
+    totalPages: Math.max(1, Math.ceil(total / limit) || 1),
+  }
+}
+
+export async function listAppointmentsForPatient(patientUserId, { page = 1, limit = DEFAULT_LIST_PAGE_SIZE } = {}) {
+  const skip = (page - 1) * limit
+  const filter = { patientUserId }
+  const [list, total] = await Promise.all([
+    Appointment.find(filter).sort({ date: -1 }).skip(skip).limit(limit).lean(),
+    Appointment.countDocuments(filter),
+  ])
 
   const therapistIds = [...new Set(list.map((a) => String(a.therapistUserId)))]
   const therapists = await User.find({ _id: { $in: therapistIds } })
@@ -96,7 +108,7 @@ export async function listAppointmentsForPatient(patientUserId) {
       `${t.firstName || ''} ${t.lastName || ''}`.trim() || 'Therapist',
     ])
   )
-  return list.map((a) => ({
+  const appointments = list.map((a) => ({
     id: String(a._id).slice(-8).toUpperCase(),
     therapist: nameById[String(a.therapistUserId)] || 'Therapist',
     dateTime: formatDateTime(a.date),
@@ -121,12 +133,19 @@ export async function listAppointmentsForPatient(patientUserId) {
     videoProvider: a.videoProvider || 'google',
     action: a.meetLink ? 'meet' : 'mail',
   }))
+  return {
+    appointments,
+    ...paginationMeta(page, limit, total),
+  }
 }
-export async function listAppointmentsForTherapist(therapistUserId) {
-  const list = await Appointment.find({ therapistUserId })
-    .sort({ date: -1 })
-    .limit(100)
-    .lean()
+
+export async function listAppointmentsForTherapist(therapistUserId, { page = 1, limit = DEFAULT_LIST_PAGE_SIZE } = {}) {
+  const skip = (page - 1) * limit
+  const filter = { therapistUserId }
+  const [list, total] = await Promise.all([
+    Appointment.find(filter).sort({ date: -1 }).skip(skip).limit(limit).lean(),
+    Appointment.countDocuments(filter),
+  ])
 
   const patientIds = [...new Set(list.map((a) => String(a.patientUserId)))]
   const patients = await User.find({ _id: { $in: patientIds } })
@@ -146,16 +165,15 @@ export async function listAppointmentsForTherapist(therapistUserId) {
     .select('availableLocationLabels availableLocations')
     .lean()
 
-  return list.map((a) => {
+  const rows = list.map((a) => {
     const pid = String(a.patientUserId)
     const anon = anonMap[pid] || { isAnonymous: false, alias: 'Patient' }
     const isAnonSession = Boolean(a.bookedAsAnonymous || anon.isAnonymous)
 
-    // Format price
-    const priceFormatted = a.servicePriceAtBooking 
+    const priceFormatted = a.servicePriceAtBooking
       ? `PKR ${Math.round(a.servicePriceAtBooking / 100)}`
       : 'N/A'
-    
+
     return {
       id: String(a._id).slice(-8).toUpperCase(),
       patient: isAnonSession ? 'Anonymous patient' : (nameById[pid] || 'Patient'),
@@ -185,13 +203,18 @@ export async function listAppointmentsForTherapist(therapistUserId) {
       action: a.meetLink ? 'meet' : 'mail',
     }
   })
+  return {
+    appointments: rows,
+    ...paginationMeta(page, limit, total),
+  }
 }
 
-export async function listAppointmentsForAdmin() {
-  const list = await Appointment.find({})
-    .sort({ date: -1 })
-    .limit(200)
-    .lean()
+export async function listAppointmentsForAdmin({ page = 1, limit = DEFAULT_LIST_PAGE_SIZE } = {}) {
+  const skip = (page - 1) * limit
+  const [list, total] = await Promise.all([
+    Appointment.find({}).sort({ date: -1 }).skip(skip).limit(limit).lean(),
+    Appointment.countDocuments({}),
+  ])
 
   const patientIds = [...new Set(list.map((a) => String(a.patientUserId)))]
   const therapistIds = [...new Set(list.map((a) => String(a.therapistUserId)))]
@@ -208,7 +231,7 @@ export async function listAppointmentsForAdmin() {
     therapists.map((t) => [String(t._id), `Dr. ${t.firstName || ''} ${t.lastName || ''}`.trim() || 'Therapist'])
   )
 
-  return list.map((a) => ({
+  const appointments = list.map((a) => ({
     id: String(a._id).slice(-8).toUpperCase(),
     fullId: String(a._id),
     patient: patientNameById[String(a.patientUserId)] || 'Patient',
@@ -223,6 +246,10 @@ export async function listAppointmentsForAdmin() {
     paymentStatus: paymentStatusUi(a.paymentStatus),
     meetLink: a.meetLink || '',
   }))
+  return {
+    appointments,
+    ...paginationMeta(page, limit, total),
+  }
 }
 
 export async function getTherapistAvailabilitySlots({ therapistUserId, date, durationMinutes = 60 }) {

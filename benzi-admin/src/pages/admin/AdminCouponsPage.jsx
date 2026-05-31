@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import AdminPagination from '../../components/AdminPagination.jsx'
-import { paginateList, ADMIN_LIST_PAGE_SIZE } from '../../lib/adminPagination.js'
 import { Loader2 } from 'lucide-react'
 import AdminLayout from '../../components/AdminLayout.jsx'
 import AdminPageLoader from '../../components/AdminPageLoader.jsx'
@@ -14,6 +13,8 @@ export default function AdminCouponsPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [couponPage, setCouponPage] = useState(1)
+  const [couponTotal, setCouponTotal] = useState(0)
+  const [couponTotalPages, setCouponTotalPages] = useState(1)
   const [form, setForm] = useState({
     code: '',
     description: '',
@@ -22,25 +23,22 @@ export default function AdminCouponsPage() {
     maxRedemptions: '',
   })
 
-  const load = () => {
+  const load = (page = couponPage) => {
     setLoading(true)
     setError('')
-    return api('/admin/subscription/coupons', { method: 'GET', silent: true })
-      .then((json) => setCoupons(json.data?.coupons || []))
+    return api(`/admin/subscription/coupons?page=${page}&limit=5`, { method: 'GET', silent: true })
+      .then((json) => {
+        setCoupons(json.data?.coupons || [])
+        setCouponTotal(json.data?.total ?? 0)
+        setCouponTotalPages(json.data?.totalPages ?? 1)
+      })
       .catch((e) => setError(e.message || 'Failed to load coupons'))
       .finally(() => setLoading(false))
   }
 
   useEffect(() => {
-    void load()
-  }, [])
-
-  const {
-    items: paginatedCoupons,
-    totalPages: couponTotalPages,
-    currentPage: couponSafePage,
-    totalItems: couponTotal,
-  } = paginateList(coupons, couponPage)
+    void load(couponPage)
+  }, [couponPage])
 
   const create = async (e) => {
     e.preventDefault()
@@ -154,7 +152,7 @@ export default function AdminCouponsPage() {
                 </tr>
               </thead>
               <tbody>
-                {paginatedCoupons.map((c) => (
+                {coupons.map((c) => (
                   <tr key={c._id} className="border-t border-black/5">
                     <td className="p-3 font-semibold">{c.code}</td>
                     <td className="p-3">
@@ -188,10 +186,9 @@ export default function AdminCouponsPage() {
           {!loading && coupons.length > 0 && (
             <div className="px-4 pb-4">
               <AdminPagination
-                currentPage={couponSafePage}
+                currentPage={couponPage}
                 totalPages={couponTotalPages}
                 totalItems={couponTotal}
-                pageSize={ADMIN_LIST_PAGE_SIZE}
                 onPageChange={setCouponPage}
               />
             </div>

@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { ShieldCheck, Mail, Key, Sparkles, Smartphone, Check } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
-import { dashboardPath } from '../lib/authPaths.js'
+import { goToPortal } from '../lib/authPaths.js'
 
 export default function Login2FAPage() {
   const location = useLocation()
@@ -165,7 +165,7 @@ export default function Login2FAPage() {
           if (res.data.isTemporaryPassword) {
             navigate('/change-password-force', { replace: true })
           } else {
-            navigate(dashboardPath(res.data.user.role), { replace: true })
+            goToPortal(navigate, res.data.user.role, { replace: true })
           }
         }, 1200)
       } else {

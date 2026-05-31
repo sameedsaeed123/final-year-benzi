@@ -7,7 +7,6 @@ import { useAuth } from '../../context/AuthContext.jsx'
 import { displayFirstName } from '../../lib/userDisplay.js'
 import { api } from '../../lib/api.js'
 import AdminPagination from '../../components/AdminPagination.jsx'
-import { paginateList, ADMIN_LIST_PAGE_SIZE } from '../../lib/adminPagination.js'
 
 export default function AdminDashboard() {
 	const { user } = useAuth()
@@ -23,25 +22,33 @@ export default function AdminDashboard() {
 		weeklyCounts: [0, 0, 0, 0, 0, 0, 0]
 	})
 	const [loading, setLoading] = useState(true)
+	const [ready, setReady] = useState(false)
 	const [loadError, setLoadError] = useState('')
 	const [patientsTablePage, setPatientsTablePage] = useState(1)
 
 	useEffect(() => {
+		let cancelled = false
 		async function fetchStats() {
 			try {
+				if (!ready) setLoading(true)
 				setLoadError('')
-				const json = await api('/admin/dashboard', { method: 'GET' })
-				if (json.success) {
+				const json = await api(
+					`/admin/dashboard?patientsPage=${patientsTablePage}&patientsLimit=5`,
+					{ method: 'GET', silent: true }
+				)
+				if (!cancelled && json.success) {
 					setStats(json.data)
+					setReady(true)
 				}
 			} catch (e) {
-				setLoadError(e.message || 'Failed to load dashboard')
+				if (!cancelled) setLoadError(e.message || 'Failed to load dashboard')
 			} finally {
-				setLoading(false)
+				if (!cancelled) setLoading(false)
 			}
 		}
 		fetchStats()
-	}, [])
+		return () => { cancelled = true }
+	}, [patientsTablePage])
 
 	const statCards = [
 		{ label: 'Total Doctors', value: stats.totalDoctors, delta: stats.docsDelta || '', icon: Stethoscope },
@@ -62,20 +69,16 @@ export default function AdminDashboard() {
 	const calendarDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 	const maxPlanCount = Math.max(1, ...packageStats.map((p) => p.value))
 	const patientRows = stats.patientsPerDoctor || []
-	const {
-		items: paginatedPatientRows,
-		totalPages: patientTablePages,
-		currentPage: patientTableSafePage,
-		totalItems: patientTableTotal,
-		startIndex: patientRowStart,
-	} = paginateList(patientRows, patientsTablePage)
+	const patientsTable = stats.patientsTable || {}
+	const patientTablePages = patientsTable.totalPages ?? 1
+	const patientTableTotal = patientsTable.total ?? patientRows.length
 
 	return (
 		<AdminLayout activeItem="Dashboard" title={`Welcome ${welcomeName}!`}>
 					<div className="space-y-6">
 						<AdminAlert type="error" message={loadError} onDismiss={() => setLoadError('')} />
 
-						{loading ? (
+						{!ready && loading ? (
 							<AdminPageLoader label="Loading dashboard…" />
 						) : (
 							<>
@@ -169,10 +172,10 @@ export default function AdminDashboard() {
 												</tr>
 											</thead>
 											<tbody>
-												{paginatedPatientRows.length > 0 ? (
-													paginatedPatientRows.map((item, index) => (
-														<tr key={item.doctorName || index} className="border-b border-black/5 hover:bg-[#fafbfa] transition-all">
-															<td className="py-4 px-4 font-semibold text-[#666]">{patientRowStart + index + 1}</td>
+												{patientRows.length > 0 ? (
+													patientRows.map((item) => (
+														<tr key={item.doctorName || item.id} className="border-b border-black/5 hover:bg-[#fafbfa] transition-all">
+															<td className="py-4 px-4 font-semibold text-[#666]">{item.id}</td>
 															<td className="py-4 px-4 font-bold text-brand">{item.doctorName}</td>
 															<td className="py-4 px-4 text-[#555]">{item.specialization}</td>
 															<td className="py-4 px-4 text-center font-semibold text-[#111]">{item.totalPatients}</td>
@@ -200,10 +203,9 @@ export default function AdminDashboard() {
 										</table>
 									</div>
 									<AdminPagination
-										currentPage={patientTableSafePage}
+										currentPage={patientsTablePage}
 										totalPages={patientTablePages}
 										totalItems={patientTableTotal}
-										pageSize={ADMIN_LIST_PAGE_SIZE}
 										onPageChange={setPatientsTablePage}
 									/>
 								</div>

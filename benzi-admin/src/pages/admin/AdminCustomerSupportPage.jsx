@@ -1,17 +1,25 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import AdminPagination from '../../components/AdminPagination.jsx'
-import { paginateList, ADMIN_LIST_PAGE_SIZE } from '../../lib/adminPagination.js'
 import { Send, CheckCircle2, Clock, Loader2 } from 'lucide-react'
 import AdminLayout from '../../components/AdminLayout.jsx'
 import AdminPageLoader from '../../components/AdminPageLoader.jsx'
 import AdminPanel from '../../components/AdminPanel.jsx'
 import { AdminAlert } from '../../components/AdminAlert.jsx'
-import { useAdminGet } from '../../hooks/useAdminQuery.js'
+import { useAdminQuery } from '../../hooks/useAdminQuery.js'
 import { api } from '../../lib/api.js'
 
 export default function AdminCustomerSupportPage() {
-  const { data, loading, error, setError, reload } = useAdminGet('/admin/tickets')
+  const [filterTab, setFilterTab] = useState('All')
+  const [page, setPage] = useState(1)
+  const path = `/admin/tickets?page=${page}&limit=5&filter=${encodeURIComponent(filterTab)}`
+  const { data, loading, error, setError, reload } = useAdminQuery(
+    () => api(path, { method: 'GET' }),
+    [path],
+    { keepPrevious: true }
+  )
   const ticketsList = data?.tickets || []
+  const total = data?.total ?? 0
+  const totalPages = data?.totalPages ?? 1
   const counts = data?.counts || {
     openTickets: 0,
     pendingReply: 0,
@@ -20,11 +28,9 @@ export default function AdminCustomerSupportPage() {
   }
 
   const [activeTicketId, setActiveTicketId] = useState(null)
-  const [filterTab, setFilterTab] = useState('All')
   const [replyMessage, setReplyMessage] = useState('')
   const [sendingReply, setSendingReply] = useState(false)
   const [success, setSuccess] = useState('')
-  const [ticketListPage, setTicketListPage] = useState(1)
 
   const effectiveActiveId =
     activeTicketId || (ticketsList.length > 0 ? ticketsList[0]._id : null)
@@ -66,29 +72,6 @@ export default function AdminCustomerSupportPage() {
     }
   }
 
-  const filteredTickets = ticketsList.filter((t) => {
-    if (filterTab === 'All') return true
-    if (filterTab === 'Open') return t.status === 'Pending'
-    if (filterTab === 'Pending') {
-      if (t.status !== 'Pending') return false
-      if (!t.replies?.length) return true
-      return t.replies[t.replies.length - 1].sender === 'user'
-    }
-    if (filterTab === 'Resolved') return t.status === 'Completed'
-    return true
-  })
-
-  const {
-    items: paginatedTickets,
-    totalPages: ticketListPages,
-    currentPage: ticketListSafePage,
-    totalItems: filteredTicketTotal,
-  } = paginateList(filteredTickets, ticketListPage)
-
-  useEffect(() => {
-    setTicketListPage(1)
-  }, [filterTab, ticketsList.length])
-
   const getRelativeTime = (dateStr) => {
     const diff = Date.now() - new Date(dateStr).getTime()
     const mins = Math.floor(diff / 60000)
@@ -105,7 +88,7 @@ export default function AdminCustomerSupportPage() {
       <AdminAlert type="error" message={error} onDismiss={() => setError('')} />
       <AdminAlert type="success" message={success} onDismiss={() => setSuccess('')} />
 
-      {loading ? (
+      {loading && !data ? (
         <AdminPageLoader label="Loading support tickets…" />
       ) : (
         <>
@@ -131,7 +114,10 @@ export default function AdminCustomerSupportPage() {
                     <button
                       key={tab}
                       type="button"
-                      onClick={() => setFilterTab(tab)}
+                      onClick={() => {
+                        setFilterTab(tab)
+                        setPage(1)
+                      }}
                       className={`rounded-full px-3 py-1 transition ${
                         filterTab === tab
                           ? 'bg-brand text-white font-semibold'
@@ -143,8 +129,8 @@ export default function AdminCustomerSupportPage() {
                   ))}
                 </div>
                 <div className="mt-4 space-y-3 max-h-[500px] overflow-y-auto pr-1">
-                  {paginatedTickets.length > 0 ? (
-                    paginatedTickets.map((ticket) => (
+                  {ticketsList.length > 0 ? (
+                    ticketsList.map((ticket) => (
                       <button
                         key={ticket._id}
                         type="button"
@@ -183,13 +169,12 @@ export default function AdminCustomerSupportPage() {
                     <p className="text-center text-[#7d8b7d] py-12 text-[13px]">No tickets found.</p>
                   )}
                 </div>
-                {filteredTicketTotal > 0 && (
+                {total > 0 && (
                   <AdminPagination
-                    currentPage={ticketListSafePage}
-                    totalPages={ticketListPages}
-                    totalItems={filteredTicketTotal}
-                    pageSize={ADMIN_LIST_PAGE_SIZE}
-                    onPageChange={setTicketListPage}
+                    currentPage={page}
+                    totalPages={totalPages}
+                    totalItems={total}
+                    onPageChange={setPage}
                   />
                 )}
               </div>

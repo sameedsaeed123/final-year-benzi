@@ -66,14 +66,18 @@ export default function PatientChatPage() {
     return () => socket.off('new_message', onNew)
   }, [getSocket, loadData])
 
-  // Sync URL
+  // Sync URL with active tab + therapist
   useEffect(() => {
+    if (chatTab === 'benzi') {
+      setSearchParams({ tab: 'benzi' }, { replace: true })
+      return
+    }
     if (activeTherapistId) {
       setSearchParams({ therapistId: activeTherapistId }, { replace: true })
     } else {
       setSearchParams({}, { replace: true })
     }
-  }, [activeTherapistId, setSearchParams])
+  }, [chatTab, activeTherapistId, setSearchParams])
 
   const handleSelectTherapist = (therapistId) => {
     setActiveTherapistId(therapistId)
@@ -125,31 +129,46 @@ export default function PatientChatPage() {
         <div className="grid gap-6 xl:grid-cols-[1.4fr_280px] max-[1280px]:grid-cols-1 items-start">
           <div className="rounded-[30px] border border-black/5 bg-white shadow-sm overflow-hidden"
             style={{ height: 'calc(100vh - 260px)', minHeight: '500px' }}>
-            <div className="flex border-b border-black/8 bg-[#f5f7f2] px-3 pt-3 gap-2">
-              <button
-                type="button"
-                onClick={() => setChatTab('therapist')}
-                className={`flex-1 rounded-full py-2 text-[13px] font-semibold transition ${
-                  chatTab === 'therapist' ? 'bg-[#0f4e34] text-white' : 'text-[#1f5f4a] hover:bg-white'
-                }`}
+            <div className="flex-shrink-0 px-4 pt-4 pb-3 border-b border-black/6 bg-[#f5f7f2]">
+              <div
+                className="flex rounded-full p-1 bg-[#e4ebe4] border border-black/6"
+                role="tablist"
+                aria-label="Message type"
               >
-                Therapist
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setChatTab('benzi')
-                  setActiveTherapistId(null)
-                }}
-                className={`flex-1 inline-flex items-center justify-center gap-1.5 rounded-full py-2 text-[13px] font-semibold transition ${
-                  chatTab === 'benzi' ? 'bg-[#0f4e34] text-white' : 'text-[#1f5f4a] hover:bg-white'
-                }`}
-              >
-                <Sparkles size={14} />
-                BENZI AI
-              </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={chatTab === 'therapist'}
+                  onClick={() => setChatTab('therapist')}
+                  className={`flex-1 inline-flex items-center justify-center gap-1.5 rounded-full py-2.5 text-[13px] font-semibold transition ${
+                    chatTab === 'therapist'
+                      ? 'bg-white text-[#0f4e34] shadow-sm'
+                      : 'text-[#3d5c4d] hover:text-[#0f4e34]'
+                  }`}
+                >
+                  <MessageCircle size={15} aria-hidden />
+                  Therapist
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={chatTab === 'benzi'}
+                  onClick={() => {
+                    setChatTab('benzi')
+                    setActiveTherapistId(null)
+                  }}
+                  className={`flex-1 inline-flex items-center justify-center gap-1.5 rounded-full py-2.5 text-[13px] font-semibold transition ${
+                    chatTab === 'benzi'
+                      ? 'bg-white text-[#0f4e34] shadow-sm'
+                      : 'text-[#3d5c4d] hover:text-[#0f4e34]'
+                  }`}
+                >
+                  <Sparkles size={15} aria-hidden />
+                  BENZI AI
+                </button>
+              </div>
             </div>
-            <div className="flex h-[calc(100%-52px)] min-h-0">
+            <div className="flex h-[calc(100%-60px)] min-h-0">
 
               {chatTab === 'benzi' ? (
                 <div className="flex-1 flex flex-col min-w-0 min-h-0">
@@ -158,7 +177,7 @@ export default function PatientChatPage() {
               ) : (
               <>
               {/* Therapist list */}
-              <div className={`flex flex-col border-r border-black/8 bg-[#fafaf8] ${activeTherapistId ? 'hidden md:flex md:w-72' : 'w-full md:w-72'}`}>
+              <div className={`flex flex-col border-r border-black/8 bg-[#f8faf8] ${activeTherapistId ? 'hidden md:flex md:w-72' : 'w-full md:w-72'}`}>
                 <div className="px-4 py-4 border-b border-black/8">
                   <p className="text-[15px] font-semibold text-[#111]">Your Therapist</p>
                   <p className="text-[11px] text-[#7d8b7d] mt-0.5">Chat with your assigned therapist</p>
