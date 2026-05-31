@@ -1,0 +1,9 @@
+# Fine-tuning (install on top of requirements.txt)
+numpy<2
+datasets>=2.19.0
+peft>=0.11.0
+accelerate>=0.30.0
+sentencepiece>=0.2.0
+protobuf>=4.25.0
+# bitsandbytes needs NVIDIA — skip on Intel Mac CPU training
+tqdm>=4.66.0

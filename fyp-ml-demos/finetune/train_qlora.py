@@ -201,7 +201,7 @@ def main() -> None:
         optim="adamw_torch",
         warmup_ratio=0.03,
         use_mps_device=False,
-        no_cuda=True,
+        no_cuda=(device != "cuda"),
     )
 
     collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
