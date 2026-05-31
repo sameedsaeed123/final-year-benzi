@@ -23,8 +23,13 @@ def main() -> None:
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     adapter = Path(args.adapter)
-    if not adapter.is_dir():
-        raise SystemExit(f"Adapter not found: {adapter}. Run train_qlora.py first.")
+    adapter_config = adapter / "adapter_config.json"
+    if not adapter_config.is_file():
+        raise SystemExit(
+            f"LoRA adapter not ready: missing {adapter_config}\n"
+            "Run train_qlora.py to completion first (Step 2 in Colab). "
+            "Do not run merge if training failed."
+        )
 
     model_id = "HuggingFaceTB/SmolLM2-360M-Instruct" if args.quick else args.model
     print(f"Loading base {model_id}…")

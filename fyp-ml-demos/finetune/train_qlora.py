@@ -187,20 +187,27 @@ def main() -> None:
 
     ADAPTER_DIR.mkdir(parents=True, exist_ok=True)
 
+    # Colab transformers may drop kwargs (e.g. use_mps_device); only pass supported ones.
+    import inspect
+
+    ta_params = {
+        "output_dir": str(ADAPTER_DIR),
+        "per_device_train_batch_size": args.batch_size,
+        "gradient_accumulation_steps": args.grad_accum,
+        "max_steps": max_steps,
+        "learning_rate": args.lr,
+        "logging_steps": 5,
+        "save_steps": max_steps,
+        "save_total_limit": 1,
+        "report_to": "none",
+        "fp16": use_4bit,
+        "optim": "adamw_torch",
+        "warmup_ratio": 0.03,
+        "no_cuda": device != "cuda",
+    }
+    sig = inspect.signature(TrainingArguments.__init__)
     training_args = TrainingArguments(
-        output_dir=str(ADAPTER_DIR),
-        per_device_train_batch_size=args.batch_size,
-        gradient_accumulation_steps=args.grad_accum,
-        max_steps=max_steps,
-        learning_rate=args.lr,
-        logging_steps=5,
-        save_steps=max_steps,
-        save_total_limit=1,
-        report_to="none",
-        fp16=use_4bit,
-        optim="adamw_torch",
-        warmup_ratio=0.03,
-        no_cuda=(device != "cuda"),
+        **{k: v for k, v in ta_params.items() if k in sig.parameters}
     )
 
     collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
