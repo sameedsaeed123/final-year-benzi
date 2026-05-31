@@ -1,0 +1,94 @@
+=== BENZI 3B training (~3h target) ===
+Started: Sun May 31 18:02:54 PKT 2026
+[1/4] Prepare dataset (1200 examples)…
+/Users/singlesolution/newrepo/fyp-ml-demos/.venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+Repo card metadata block was not found. Setting CardData to empty.
+[empathetic] loading up to 600…
+[empathetic] got 600 rows
+[counsel-chat] loading up to 400…
+[counsel-chat] got 400 rows
+Wrote /Users/singlesolution/newrepo/fyp-ml-demos/finetune/data/benzi_train.jsonl (950 rows)
+Wrote /Users/singlesolution/newrepo/fyp-ml-demos/finetune/data/benzi_val.jsonl (50 rows)
+Stats: /Users/singlesolution/newrepo/fyp-ml-demos/finetune/data/benzi_dataset_stats.json
+[2/4] LoRA train Qwen2.5-3B (60 steps, tuned for ~2–3h CPU)…
+/Users/singlesolution/newrepo/fyp-ml-demos/.venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+`torch_dtype` is deprecated! Use `dtype` instead!
+[benzi-3h] Qwen2.5-3B LoRA — target ~2–3 hours on 32GB Intel Mac
+Training on 950 examples, max_steps=60, model=Qwen/Qwen2.5-3B-Instruct
+Device: cpu, 4bit: False
+Fetching 2 files:   0%|          | 0/2 [00:00<?, ?it/s]Fetching 2 files:  50%|█████     | 1/2 [56:47<56:47, 3407.22s/it]Fetching 2 files: 100%|██████████| 2/2 [56:47<00:00, 1703.61s/it]
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [00:08<00:08,  8.38s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:15<00:00,  7.39s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:15<00:00,  7.54s/it]
+trainable params: 3,686,400 || all params: 3,089,625,088 || trainable%: 0.1193
+Map:   0%|          | 0/950 [00:00<?, ? examples/s]Map: 100%|██████████| 950/950 [00:00<00:00, 2851.94 examples/s]Map: 100%|██████████| 950/950 [00:00<00:00, 2790.20 examples/s]
+Starting training…
+  0%|          | 0/60 [00:00<?, ?it/s]Traceback (most recent call last):
+  File "/Users/singlesolution/newrepo/fyp-ml-demos/finetune/train_qlora.py", line 196, in <module>
+    main()
+  File "/Users/singlesolution/newrepo/fyp-ml-demos/finetune/train_qlora.py", line 189, in main
+    trainer.train()
+  File "/Users/singlesolution/newrepo/fyp-ml-demos/.venv/lib/python3.9/site-packages/transformers/trainer.py", line 2325, in train
+    return inner_training_loop(
+  File "/Users/singlesolution/newrepo/fyp-ml-demos/.venv/lib/python3.9/site-packages/transformers/trainer.py", line 2674, in _inner_training_loop
+    tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
+  File "/Users/singlesolution/newrepo/fyp-ml-demos/.venv/lib/python3.9/site-packages/transformers/trainer.py", line 4020, in training_step
+    loss = self.compute_loss(model, inputs, num_items_in_batch=num_items_in_batch)
+  File "/Users/singlesolution/newrepo/fyp-ml-demos/.venv/lib/python3.9/site-packages/transformers/trainer.py", line 4110, in compute_loss
+    outputs = model(**inputs)
+  File "/Users/singlesolution/newrepo/fyp-ml-demos/.venv/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1511, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/Users/singlesolution/newrepo/fyp-ml-demos/.venv/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1520, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/Users/singlesolution/newrepo/fyp-ml-demos/.venv/lib/python3.9/site-packages/peft/peft_model.py", line 1850, in forward
+    return self.base_model(
+  File "/Users/singlesolution/newrepo/fyp-ml-demos/.venv/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1511, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/Users/singlesolution/newrepo/fyp-ml-demos/.venv/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1520, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/Users/singlesolution/newrepo/fyp-ml-demos/.venv/lib/python3.9/site-packages/peft/tuners/tuners_utils.py", line 222, in forward
+    return self.model.forward(*args, **kwargs)
+  File "/Users/singlesolution/newrepo/fyp-ml-demos/.venv/lib/python3.9/site-packages/transformers/utils/generic.py", line 918, in wrapper
+    output = func(self, *args, **kwargs)
+  File "/Users/singlesolution/newrepo/fyp-ml-demos/.venv/lib/python3.9/site-packages/transformers/models/qwen2/modeling_qwen2.py", line 449, in forward
+    outputs: BaseModelOutputWithPast = self.model(
+  File "/Users/singlesolution/newrepo/fyp-ml-demos/.venv/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1511, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/Users/singlesolution/newrepo/fyp-ml-demos/.venv/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1520, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/Users/singlesolution/newrepo/fyp-ml-demos/.venv/lib/python3.9/site-packages/transformers/utils/generic.py", line 1072, in wrapper
+    outputs = func(self, *args, **kwargs)
+  File "/Users/singlesolution/newrepo/fyp-ml-demos/.venv/lib/python3.9/site-packages/transformers/models/qwen2/modeling_qwen2.py", line 384, in forward
+    hidden_states = decoder_layer(
+  File "/Users/singlesolution/newrepo/fyp-ml-demos/.venv/lib/python3.9/site-packages/transformers/modeling_layers.py", line 94, in __call__
+    return super().__call__(*args, **kwargs)
+  File "/Users/singlesolution/newrepo/fyp-ml-demos/.venv/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1511, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/Users/singlesolution/newrepo/fyp-ml-demos/.venv/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1520, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/Users/singlesolution/newrepo/fyp-ml-demos/.venv/lib/python3.9/site-packages/transformers/utils/deprecation.py", line 172, in wrapped_func
+    return func(*args, **kwargs)
+  File "/Users/singlesolution/newrepo/fyp-ml-demos/.venv/lib/python3.9/site-packages/transformers/models/qwen2/modeling_qwen2.py", line 249, in forward
+    hidden_states = self.mlp(hidden_states)
+  File "/Users/singlesolution/newrepo/fyp-ml-demos/.venv/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1511, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/Users/singlesolution/newrepo/fyp-ml-demos/.venv/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1520, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/Users/singlesolution/newrepo/fyp-ml-demos/.venv/lib/python3.9/site-packages/transformers/models/qwen2/modeling_qwen2.py", line 46, in forward
+    down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
+RuntimeError: MPS backend out of memory (MPS allocated: 6.74 GB, other allocations: 24.65 MB, max allowed: 6.77 GB). Tried to allocate 8.06 MB on private pool. Use PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0 to disable upper limit for memory allocations (may cause system failure).
+  0%|          | 0/60 [00:06<?, ?it/s]
+/Users/singlesolution/newrepo/fyp-ml-demos/.venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+`torch_dtype` is deprecated! Use `dtype` instead!
+[benzi-3h] Qwen2.5-3B LoRA on CPU (MPS disabled) — ~2–4h on 32GB Mac
+Training on 950 examples, max_steps=60, model=Qwen/Qwen2.5-3B-Instruct
+Device: cpu, 4bit: False
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [00:03<00:03,  3.01s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:04<00:00,  2.25s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:04<00:00,  2.37s/it]
+trainable params: 3,686,400 || all params: 3,089,625,088 || trainable%: 0.1193
+Map:   0%|          | 0/950 [00:00<?, ? examples/s]Map: 100%|██████████| 950/950 [00:00<00:00, 3101.21 examples/s]Map: 100%|██████████| 950/950 [00:00<00:00, 3039.54 examples/s]
+/Users/singlesolution/newrepo/fyp-ml-demos/.venv/lib/python3.9/site-packages/transformers/training_args.py:1636: FutureWarning: using `no_cuda` is deprecated and will be removed in version 5.0 of 🤗 Transformers. Use `use_cpu` instead
+  warnings.warn(
+Starting training…
+  0%|          | 0/60 [00:00<?, ?it/s]/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/multiprocessing/resource_tracker.py:216: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
