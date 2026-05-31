@@ -10,6 +10,31 @@ MERGED_DIR = Path(__file__).resolve().parent / "merged" / "benzi-empathetic-hf"
 DEFAULT_MODEL = "Qwen/Qwen2.5-3B-Instruct"
 
 
+def _fix_torchao_for_peft() -> None:
+    """Colab often has torchao 0.10; peft requires >=0.16 or no torchao at all."""
+    import subprocess
+    import sys
+
+    try:
+        import torchao  # noqa: F401
+        from importlib.metadata import version as pkg_version
+
+        ver = pkg_version("torchao")
+    except Exception:
+        return
+
+    def parse_major_minor(v: str) -> tuple[int, int]:
+        parts = v.split(".")
+        return int(parts[0]), int(parts[1]) if len(parts) > 1 else 0
+
+    major, minor = parse_major_minor(ver)
+    if (major, minor) < (0, 16):
+        print(f"Upgrading torchao {ver} → >=0.16 for peft merge…")
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", "-q", "torchao>=0.16.0"],
+        )
+
+
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--model", default=DEFAULT_MODEL, help="Must match the base used in train_qlora.py")
@@ -17,6 +42,8 @@ def main() -> None:
     p.add_argument("--adapter", default=str(ADAPTER_DIR))
     p.add_argument("--out", default=str(MERGED_DIR))
     args = p.parse_args()
+
+    _fix_torchao_for_peft()
 
     import torch
     from peft import PeftModel
