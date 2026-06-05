@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Bell, ChevronRight, MessageCircle, Sparkles, User } from 'lucide-react'
+import { Bell, ChevronRight, MessageCircle, Sparkles } from 'lucide-react'
 import PatientSidebar from '../../components/PatientSidebar'
 import ChatWindow from '../../components/ChatWindow'
+import ChatAvatar from '../../components/ChatAvatar'
 import BenziAiChatWindow from '../../components/BenziAiChatWindow'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useSocket } from '../../context/SocketContext.jsx'
@@ -57,7 +58,6 @@ export default function PatientChatPage() {
     void loadData()
   }, [loadData])
 
-  // Refresh on new message
   useEffect(() => {
     const socket = getSocket()
     if (!socket) return
@@ -214,13 +214,11 @@ export default function PatientChatPage() {
                         activeTherapistId === t.therapistUserId ? 'bg-[#e8f3ea]' : ''
                       }`}>
                       <div className="relative flex-shrink-0">
-                        {t.image ? (
-                          <img src={t.image} alt={t.name} className="h-10 w-10 rounded-full object-cover border border-black/8" />
-                        ) : (
-                          <div className="h-10 w-10 rounded-full bg-[#e8f3ea] flex items-center justify-center">
-                            <User size={14} className="text-[#1f5f4a]" />
-                          </div>
-                        )}
+                        <ChatAvatar
+                          src={t.image}
+                          alt={t.name}
+                          className="h-10 w-10 rounded-full object-cover border border-black/8"
+                        />
                         {t.unread > 0 && (
                           <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-[#0f4e34] text-white text-[9px] font-bold flex items-center justify-center">
                             {t.unread > 9 ? '9+' : t.unread}

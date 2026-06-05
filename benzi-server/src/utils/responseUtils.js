@@ -7,7 +7,7 @@ export function sendSuccess(res, data, message = 'OK', statusCode = 200) {
   })
 }
 
-export function sendError(res, message, statusCode = 400, errors = null) {
+export function sendError(res, message, statusCode = 400, errors = null, code = null) {
   const body = {
     success: false,
     data: null,
@@ -15,5 +15,6 @@ export function sendError(res, message, statusCode = 400, errors = null) {
     statusCode,
   }
   if (errors) body.errors = errors
+  if (code) body.code = code
   return res.status(statusCode).json(body)
 }

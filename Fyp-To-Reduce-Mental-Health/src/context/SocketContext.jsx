@@ -34,8 +34,10 @@ export function SocketProvider({ children }) {
     const socket = io(base, {
       auth: { token },
       transports: ['websocket', 'polling'],
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 800,
+      reconnectionDelayMax: 4000,
+      timeout: 20000,
     })
 
     socket.on('connect', () => setConnected(true))

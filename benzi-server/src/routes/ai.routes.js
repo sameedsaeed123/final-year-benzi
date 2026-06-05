@@ -3,6 +3,7 @@ import { verifyJWT, requireRoles } from '../middleware/verifyJWT.js'
 import {
   patientAiChat,
   getAiChatHistory,
+  clearAiChatHistory,
   getPatientMoodStats,
   logPatientMood,
   getAiDashboard,
@@ -25,6 +26,7 @@ router.get('/health', getLlmHealth)
 
 router.post('/chat', verifyJWT, requireRoles('patient'), patientAiChat)
 router.get('/chat/history', verifyJWT, requireRoles('patient'), getAiChatHistory)
+router.delete('/chat/history', verifyJWT, requireRoles('patient'), clearAiChatHistory)
 
 router.get('/dashboard/me', verifyJWT, requireRoles('patient'), getAiDashboard)
 router.get('/dashboard/patient/:patientUserId', verifyJWT, requireRoles('therapist'), getAiDashboard)

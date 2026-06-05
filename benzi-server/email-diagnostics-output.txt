@@ -1,58 +1,72 @@
-=== BENZI STARTUP EMAIL LOG DIAGNOSTICS (GENERATED AT: 2026-06-05T11:18:00.303Z) ===
+=== BENZI STARTUP EMAIL LOG DIAGNOSTICS (GENERATED AT: 2026-06-05T23:42:30.319Z) ===
 
-[1] ID: 6a22afe555dce75cc48a7287
-Recipient: sam***@gmail.com
+[1] ID: 6a232ac0369776c427a71bc8
+Recipient: has***@gmail.com
+Subject: Upcoming Appointment Reminder
+Status: sent
+Attempts: 1
+Created At: 2026-06-05T20:00:00.459Z
+-------------------------------------------
+[2] ID: 6a231cb0369776c427a71b9b
+Recipient: fai***@gmail.com
+Subject: Upcoming Appointment Reminder
+Status: sent
+Attempts: 1
+Created At: 2026-06-05T19:00:00.683Z
+-------------------------------------------
+[3] ID: 6a230d300d14bcc12277311a
+Recipient: fai***@gmail.com
 Subject: Your BENZI Appointment Status Updated
 Status: sent
 Attempts: 1
-Created At: 2026-06-05T11:15:49.922Z
+Created At: 2026-06-05T17:53:52.825Z
 -------------------------------------------
-[2] ID: 6a22acd31019dab7cde1609a
-Recipient: sam***@gmail.com
+[4] ID: 6a230d270d14bcc1227730f8
+Recipient: fai***@gmail.com
 Subject: Your BENZI Appointment Status Updated
 Status: sent
 Attempts: 1
-Created At: 2026-06-05T11:02:43.666Z
+Created At: 2026-06-05T17:53:43.976Z
 -------------------------------------------
-[3] ID: 6a22ac00f998eb61b4b8daeb
+[5] ID: 6a230cce0d11f7243a673f9d
 Recipient: sam***@gmail.com
-Subject: Your BENZI Appointment Status Updated
+Subject: New BENZI Appointment Booked - Faizyab Ahmad
 Status: sent
 Attempts: 1
-Created At: 2026-06-05T10:59:12.160Z
+Created At: 2026-06-05T17:52:14.121Z
 -------------------------------------------
-[4] ID: 6a22aa9bb0ba6e0375602005
-Recipient: sam***@gmail.com
-Subject: Your BENZI Appointment Status Updated
-Status: sent
-Attempts: 1
-Created At: 2026-06-05T10:53:15.645Z
--------------------------------------------
-[5] ID: 6a22aa91b0ba6e0375601fe4
-Recipient: sam***@gmail.com
-Subject: Your BENZI Appointment Status Updated
-Status: sent
-Attempts: 1
-Created At: 2026-06-05T10:53:05.487Z
--------------------------------------------
-[6] ID: 6a22a872d27047a1732df3b7
-Recipient: sam***@gmail.com
+[6] ID: 6a230cce0d11f7243a673f9b
+Recipient: fai***@gmail.com
 Subject: Your BENZI Appointment Confirmation
 Status: sent
 Attempts: 1
-Created At: 2026-06-05T10:44:02.899Z
+Created At: 2026-06-05T17:52:14.084Z
 -------------------------------------------
-[7] ID: 6a22a872d27047a1732df3b5
-Recipient: sam***@gmail.com
-Subject: New BENZI Appointment Booked - Sameed Saeed
+[7] ID: 6a22d2580d14bcc122772b65
+Recipient: has***@gmail.com
+Subject: Your BENZI Appointment Status Updated
 Status: sent
 Attempts: 1
-Created At: 2026-06-05T10:44:02.894Z
+Created At: 2026-06-05T13:42:48.703Z
 -------------------------------------------
-[8] ID: 6a22a679d27047a1732df2b0
-Recipient: sam***@gmail.com
-Subject: Congratulations! Your BENZI Verification is Approved
+[8] ID: 6a22d2500d14bcc122772b43
+Recipient: has***@gmail.com
+Subject: Your BENZI Appointment Status Updated
 Status: sent
 Attempts: 1
-Created At: 2026-06-05T10:35:37.084Z
+Created At: 2026-06-05T13:42:40.084Z
+-------------------------------------------
+[9] ID: 6a22d1db0d14bcc122772b03
+Recipient: has***@gmail.com
+Subject: Your BENZI Appointment Confirmation
+Status: sent
+Attempts: 1
+Created At: 2026-06-05T13:40:43.580Z
+-------------------------------------------
+[10] ID: 6a22d1db0d14bcc122772b01
+Recipient: sam***@gmail.com
+Subject: New BENZI Appointment Booked - hassan hayat
+Status: sent
+Attempts: 1
+Created At: 2026-06-05T13:40:43.570Z
 -------------------------------------------

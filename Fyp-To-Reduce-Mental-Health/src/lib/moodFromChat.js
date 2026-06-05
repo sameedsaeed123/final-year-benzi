@@ -1,4 +1,3 @@
-/** Map BENZI sentiment / mood log label → dashboard mood chip. */
 export function sentimentToMoodLabel(sentimentLabel) {
   if (sentimentLabel === 'positive') return 'Good'
   if (sentimentLabel === 'negative') return 'Bad'

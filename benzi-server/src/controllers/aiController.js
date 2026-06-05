@@ -153,12 +153,34 @@ export async function patientAiChat(req, res, next) {
 export async function getAiChatHistory(req, res, next) {
   try {
     const patientUserId = req.user.id
-    const messages = await AiMessage.find({ patientUserId })
+    const messages = await AiMessage.find({
+      patientUserId,
+      clearedFromHistoryAt: null,
+    })
       .sort({ createdAt: 1 })
       .limit(50)
       .lean()
 
     return sendSuccess(res, { messages }, 'OK', 200)
+  } catch (e) {
+    next(e)
+  }
+}
+
+export async function clearAiChatHistory(req, res, next) {
+  try {
+    const patientUserId = req.user.id
+    const result = await AiMessage.updateMany(
+      { patientUserId, clearedFromHistoryAt: null },
+      { $set: { clearedFromHistoryAt: new Date() } }
+    )
+
+    return sendSuccess(
+      res,
+      { cleared: result.modifiedCount || 0 },
+      'Chat cleared',
+      200
+    )
   } catch (e) {
     next(e)
   }

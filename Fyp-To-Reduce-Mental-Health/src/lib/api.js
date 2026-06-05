@@ -16,6 +16,13 @@ export function resolveMediaUrl(url) {
   return trimmed
 }
 
+export const DEFAULT_AVATAR = '/images/therapist-profile-image.png'
+
+export function resolveAvatarUrl(url, fallback = DEFAULT_AVATAR) {
+  const resolved = resolveMediaUrl(url)
+  return resolved || fallback
+}
+
 export function getStoredToken() {
   return sessionStorage.getItem(STORAGE_KEY) || localStorage.getItem(STORAGE_KEY)
 }
@@ -49,10 +56,6 @@ function endRequest() {
   }
 }
 
-/**
- * @param {string} path - e.g. "/auth/login" (no /api prefix)
- * @param {RequestInit} options
- */
 const BACKEND_UNREACHABLE_MSG =
   'Cannot reach the backend. Start the API on port 5000: cd benzi-server && npm run dev — or from repo root: npm run dev.'
 
@@ -100,12 +103,6 @@ export async function api(path, options = {}) {
   }
 }
 
-/**
- * Multipart upload (no JSON Content-Type).
- * @param {string} path - e.g. "/auth/profile-photo"
- * @param {FormData} formData
- * @param {RequestInit} [options]
- */
 export async function apiForm(path, formData, options = {}) {
   const { silent, ...fetchOptions } = options
   if (!silent) startRequest()

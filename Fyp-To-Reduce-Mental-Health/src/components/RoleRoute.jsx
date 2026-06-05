@@ -2,11 +2,6 @@ import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 import { dashboardPath } from '../lib/authPaths.js'
 
-/**
- * @param {object} props
- * @param {import('react').ReactNode} props.children
- * @param {('patient'|'therapist'|'admin')[]} props.allow
- */
 export default function RoleRoute({ children, allow }) {
   const { user, loading, patientLinked } = useAuth()
   const location = useLocation()

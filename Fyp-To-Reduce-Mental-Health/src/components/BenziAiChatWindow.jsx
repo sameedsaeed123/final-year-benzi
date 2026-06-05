@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, Eraser } from 'lucide-react'
 import { api } from '../lib/api.js'
 import { sanitizeChatReply } from '../lib/textSanitize.js'
 import { groupMessagesByDay } from '../lib/chatFormat.js'
@@ -22,6 +22,7 @@ export default function BenziAiChatWindow() {
   const [loadingHistory, setLoadingHistory] = useState(true)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
+  const [clearing, setClearing] = useState(false)
   const listRef = useRef(null)
   const stickToBottomRef = useRef(true)
 
@@ -108,6 +109,27 @@ export default function BenziAiChatWindow() {
     }
   }
 
+  const handleClearChat = async () => {
+    if (clearing || sending) return
+    if (!messages.length) return
+
+    const ok = window.confirm(
+      'Clear this chat?\n\nYour mood logs, wellness stats, and progress charts will stay — only the conversation history is removed.'
+    )
+    if (!ok) return
+
+    setClearing(true)
+    setError('')
+    try {
+      await api('/ai/chat/history', { method: 'DELETE', silent: true })
+      setMessages([])
+    } catch (e) {
+      setError(e.message || 'Could not clear chat')
+    } finally {
+      setClearing(false)
+    }
+  }
+
   const grouped = groupMessagesByDay(messages)
 
   return (
@@ -119,6 +141,17 @@ export default function BenziAiChatWindow() {
           <div className="h-10 w-10 rounded-full bg-[#0f4e34] flex items-center justify-center text-white flex-shrink-0">
             <Sparkles size={18} />
           </div>
+        }
+        action={
+          <button
+            type="button"
+            onClick={() => void handleClearChat()}
+            disabled={clearing || loadingHistory || messages.length === 0}
+            className="inline-flex items-center gap-1.5 rounded-full border border-[#0f4e34]/20 bg-[#f0f7f2] px-3 py-1.5 text-[11px] font-semibold text-[#0f4e34] hover:bg-[#e8f3ea] hover:border-[#0f4e34]/35 transition disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+          >
+            <Eraser size={13} />
+            {clearing ? 'Clearing…' : 'Clear chat'}
+          </button>
         }
       />
 
@@ -152,6 +185,7 @@ export default function BenziAiChatWindow() {
               <ChatMessageRow
                 key={item._id}
                 isMe={isPatient}
+                senderLabel={isPatient ? '' : 'BENZI'}
                 text={body}
                 createdAt={item.createdAt}
                 avatar={!isPatient ? <AiAvatar /> : null}

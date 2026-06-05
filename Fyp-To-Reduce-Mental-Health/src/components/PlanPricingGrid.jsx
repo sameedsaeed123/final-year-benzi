@@ -1,7 +1,6 @@
 import { CheckCircle2, ArrowRight } from 'lucide-react'
 import PortalCtaLink from './PortalCtaLink.jsx'
 
-/** Original BENZI pricing card layout — data from API, visuals unchanged. */
 export default function PlanPricingGrid({
   billing = 'Annual',
   plans = [],

@@ -38,7 +38,6 @@ export function setCached(key, data) {
   writePersist(key, entry)
 }
 
-/** Drop cached entries. Pass a prefix to clear a group (e.g. "/ai/"). */
 export function invalidateCache(prefix) {
   for (const key of [...mem.keys()]) {
     if (!prefix || key.startsWith(prefix)) mem.delete(key)
@@ -55,10 +54,6 @@ export function invalidateCache(prefix) {
   }
 }
 
-/**
- * Promise-based cached GET for imperative call sites (loops, secondary data).
- * Shows the page loader only on a true cold fetch; revalidations are silent.
- */
 export async function cachedFetch(path, { freshMs = DEFAULT_FRESH_MS, force = false, silent } = {}) {
   const cached = getCached(path)
   if (!force && cached && Date.now() - cached.ts < freshMs) return cached.data
@@ -69,13 +64,6 @@ export async function cachedFetch(path, { freshMs = DEFAULT_FRESH_MS, force = fa
   return data
 }
 
-/**
- * Hook: returns cached data immediately (if any) and revalidates in the
- * background. Same data shape as `json.data` from the endpoint.
- *
- * @param {string|null} path  endpoint path (null disables the fetch)
- * @param {{ enabled?: boolean, freshMs?: number }} [opts]
- */
 export function useCachedGet(path, { enabled = true, freshMs = DEFAULT_FRESH_MS } = {}) {
   const initial = enabled && path ? getCached(path) : undefined
   const [data, setData] = useState(initial ? initial.data : null)

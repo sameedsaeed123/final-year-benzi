@@ -7,9 +7,23 @@ const messageSchema = new mongoose.Schema(
     patientUserId:   { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     senderUserId:    { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     senderRole:      { type: String, enum: ['therapist', 'patient'], required: true },
-    text:            { type: String, required: true, maxlength: 4000 },
+    text:            { type: String, default: '', maxlength: 4000 },
+    listPreview:     { type: String, default: '', maxlength: 4000 },
+    attachment: {
+      type:     { type: String, enum: ['image', 'pdf', 'video', 'audio', null], default: null },
+      url:      { type: String, default: '' },
+      name:     { type: String, default: '' },
+      mimeType: { type: String, default: '' },
+      size:     { type: Number, default: 0 },
+    },
     readAt:          { type: Date, default: null },
+    editedAt:        { type: Date, default: null },
     deletedAt:       { type: Date, default: null },
+    reactions: [{
+      emoji:    { type: String, required: true, maxlength: 8 },
+      userId:   { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+      role:     { type: String, enum: ['therapist', 'patient'], required: true },
+    }],
   },
   { timestamps: true }
 )

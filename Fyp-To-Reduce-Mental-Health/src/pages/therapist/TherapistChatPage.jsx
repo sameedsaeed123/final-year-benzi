@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Bell, ChevronRight, MessageCircle, Search, User, EyeOff } from 'lucide-react'
+import { Bell, ChevronRight, MessageCircle, Search, EyeOff } from 'lucide-react'
 import TherapistSidebar from '../../components/TherapistSidebar'
 import ChatWindow from '../../components/ChatWindow'
+import ChatAvatar from '../../components/ChatAvatar'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useSocket } from '../../context/SocketContext.jsx'
 import { displayFirstName } from '../../lib/userDisplay.js'
@@ -26,33 +27,51 @@ export default function TherapistChatPage() {
   const [searchParams, setSearchParams] = useSearchParams()
 
   const [conversations, setConversations] = useState([])
+  const [clients, setClients] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [activePatientId, setActivePatientId] = useState(searchParams.get('patientId') || null)
 
   const loadConversations = useCallback(async () => {
     try {
-      const json = await api('/chat/therapist/conversations', { method: 'GET' })
+      const json = await api('/chat/therapist/conversations', { method: 'GET', silent: true })
       setConversations(json.data?.conversations || [])
     } catch {
       // ignore
-    } finally {
-      setLoading(false)
     }
   }, [])
 
-  useEffect(() => {
-    void loadConversations()
-  }, [loadConversations])
+  const loadClients = useCallback(async () => {
+    try {
+      const json = await api('/therapists/clients/me', { method: 'GET', silent: true })
+      setClients(json.data?.clients || [])
+    } catch {
+      // ignore
+    }
+  }, [])
 
-  // Refresh conversations when new message arrives
+  const loadAll = useCallback(async () => {
+    setLoading(true)
+    await Promise.all([loadConversations(), loadClients()])
+    setLoading(false)
+  }, [loadConversations, loadClients])
+
+  useEffect(() => {
+    void loadAll()
+  }, [loadAll])
+
+  useEffect(() => {
+    const pid = searchParams.get('patientId')
+    if (pid) setActivePatientId(pid)
+  }, [searchParams])
+
   useEffect(() => {
     const socket = getSocket()
     if (!socket) return
-    const onNew = () => void loadConversations()
+    const onNew = () => void loadAll()
     socket.on('new_message', onNew)
     return () => socket.off('new_message', onNew)
-  }, [getSocket, loadConversations])
+  }, [getSocket, loadAll])
 
   // Sync URL param
   useEffect(() => {
@@ -63,20 +82,40 @@ export default function TherapistChatPage() {
     }
   }, [activePatientId, setSearchParams])
 
-  const activeConv = conversations.find((c) => c.patientUserId === activePatientId)
+  const conversationIds = new Set(conversations.map((c) => c.patientUserId))
+  const newClientThreads = clients
+    .filter((c) => !conversationIds.has(c.id))
+    .map((c) => ({
+      patientUserId: c.id,
+      name: c.name,
+      image: c.image,
+      isAnonymous: c.isAnonymous,
+      lastMessage: 'Start a conversation',
+      lastAtRaw: null,
+      lastSenderRole: null,
+      unread: 0,
+    }))
+
+  const allConversations = [...conversations, ...newClientThreads]
+
+  const activeConv = allConversations.find((c) => c.patientUserId === activePatientId)
+  const activeClient = clients.find((c) => c.id === activePatientId)
+  const activePatientInfo = activeConv || (activeClient ? {
+    patientUserId: activeClient.id,
+    name: activeClient.name,
+    image: activeClient.image,
+    isAnonymous: activeClient.isAnonymous,
+  } : null)
 
   const filtered = search.trim()
-    ? conversations.filter((c) => c.name?.toLowerCase().includes(search.toLowerCase()))
-    : conversations
+    ? allConversations.filter((c) => c.name?.toLowerCase().includes(search.toLowerCase()))
+    : allConversations
 
   const handleSelectConv = (patientId) => {
     setActivePatientId(patientId)
-    // Reset unread for this conversation
     void api(`/chat/therapist/read/${patientId}`, { method: 'PATCH' }).catch(() => {})
-    // Refresh unread count
     api('/chat/unread', { method: 'GET' }).then((j) => setUnread(j.data?.unread || 0)).catch(() => {})
-    // Refresh list
-    void loadConversations()
+    void loadAll()
   }
 
   return (
@@ -136,12 +175,16 @@ export default function TherapistChatPage() {
                         activePatientId === conv.patientUserId ? 'bg-[#e8f3ea]' : ''
                       }`}>
                       <div className="relative flex-shrink-0">
-                        {conv.image ? (
-                          <img src={conv.image} alt={conv.name} className="h-10 w-10 rounded-full object-cover border border-black/8" />
-                        ) : (
+                        {conv.isAnonymous ? (
                           <div className="h-10 w-10 rounded-full bg-[#e8f3ea] flex items-center justify-center">
-                            {conv.isAnonymous ? <EyeOff size={14} className="text-[#1f5f4a]" /> : <User size={14} className="text-[#1f5f4a]" />}
+                            <EyeOff size={14} className="text-[#1f5f4a]" />
                           </div>
+                        ) : (
+                          <ChatAvatar
+                            src={conv.image}
+                            alt={conv.name}
+                            className="h-10 w-10 rounded-full object-cover border border-black/8"
+                          />
                         )}
                         {conv.unread > 0 && (
                           <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-[#0f4e34] text-white text-[9px] font-bold flex items-center justify-center">
@@ -167,16 +210,29 @@ export default function TherapistChatPage() {
 
               {/* Chat window */}
               <div className={`flex-1 flex flex-col min-w-0 ${!activePatientId ? 'hidden md:flex' : 'flex'}`}>
-                {activePatientId && activeConv ? (
+                {activePatientId && activePatientInfo ? (
                   <ChatWindow
                     therapistUserId={user?.id}
                     patientUserId={activePatientId}
-                    otherName={activeConv.name}
-                    otherImage={activeConv.image}
-                    otherIsAnonymous={activeConv.isAnonymous}
+                    otherName={activePatientInfo.name}
+                    otherImage={activePatientInfo.image}
+                    otherIsAnonymous={activePatientInfo.isAnonymous}
                     myRole="therapist"
                     onBack={() => setActivePatientId(null)}
                   />
+                ) : activePatientId && loading ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center px-8">
+                    <div className="flex gap-1 mb-4">
+                      {[0, 1, 2].map((i) => (
+                        <span
+                          key={i}
+                          className="w-2 h-2 rounded-full bg-[#1f5f4a]/40 animate-bounce"
+                          style={{ animationDelay: `${i * 150}ms` }}
+                        />
+                      ))}
+                    </div>
+                    <p className="text-[13px] text-[#7d8b7d]">Opening chat…</p>
+                  </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full text-center px-8">
                     <div className="h-16 w-16 rounded-full bg-[#e8f3ea] flex items-center justify-center mb-4">

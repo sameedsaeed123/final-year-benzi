@@ -63,3 +63,44 @@ export function emitStatsUpdated(patientUserId, therapistUserId, analytics) {
     },
   })
 }
+
+function chatRoomId(therapistUserId, patientUserId) {
+  return `chat:${therapistUserId}:${patientUserId}`
+}
+
+export function emitChatMessage(therapistUserId, patientUserId, message) {
+  if (!ioInstance) return
+  const room = chatRoomId(therapistUserId, patientUserId)
+  ioInstance.to(room).emit('new_message', message)
+}
+
+export function emitChatMessageUpdate(therapistUserId, patientUserId, message) {
+  if (!ioInstance) return
+  const room = chatRoomId(therapistUserId, patientUserId)
+  ioInstance.to(room).emit('message_updated', message)
+}
+
+export function notifyChatRecipient({
+  therapistUserId,
+  patientUserId,
+  senderRole,
+  message,
+}) {
+  const recipientId = senderRole === 'therapist' ? patientUserId : therapistUserId
+  const preview = message.attachment?.type
+    ? message.text?.slice(0, 80) || `[${message.attachment.type}]`
+    : message.text?.slice(0, 80)
+
+  emitActivityNotification({
+    patientUserId,
+    therapistUserId,
+    notifyUserIds: [recipientId],
+    type: 'chat_message',
+    title: 'New message',
+    message:
+      senderRole === 'therapist'
+        ? 'Your therapist sent you a message'
+        : 'Your patient sent a new message',
+    data: { messageId: message.id, preview },
+  })
+}

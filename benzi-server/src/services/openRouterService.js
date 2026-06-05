@@ -1,6 +1,8 @@
 import { buildSystemInstruction, buildGoalRecommendationPrompt } from './aiPromptBuilder.js'
 import { sanitizeGoalRecommendations } from '../utils/textSanitize.js'
 
+import { getOpenRouterAttributionHeaders } from '../utils/appBranding.js'
+
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
 
 /** openai/gpt-4o-mini works on low credits; google/gemini on OR often needs paid credits */
@@ -57,8 +59,7 @@ async function chatCompletion(messages, model, options = {}) {
     headers: {
       Authorization: `Bearer ${getApiKey()}`,
       'Content-Type': 'application/json',
-      'HTTP-Referer': process.env.FRONTEND_URL || 'http://localhost:5173',
-      'X-Title': 'BENZI Mental Health',
+      ...getOpenRouterAttributionHeaders(),
     },
     body: JSON.stringify({
       model,

@@ -102,7 +102,7 @@ export async function buildPatientContext(patientUserId, options = {}) {
     }
   }
 
-  const aiMsgs = await AiMessage.find({ patientUserId })
+  const aiMsgs = await AiMessage.find({ patientUserId, clearedFromHistoryAt: null })
     .sort({ createdAt: -1 })
     .limit(20)
     .lean()

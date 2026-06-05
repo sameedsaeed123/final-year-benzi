@@ -29,6 +29,7 @@ fs.mkdirSync(path.join(uploadsRoot, 'profiles'), { recursive: true })
 fs.mkdirSync(path.join(uploadsRoot, 'payments'), { recursive: true })
 fs.mkdirSync(path.join(uploadsRoot, 'records'), { recursive: true })
 fs.mkdirSync(path.join(uploadsRoot, 'documents'), { recursive: true })
+fs.mkdirSync(path.join(uploadsRoot, 'chat'), { recursive: true })
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }))
 app.use(

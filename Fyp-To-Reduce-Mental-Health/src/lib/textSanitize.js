@@ -1,4 +1,3 @@
-/** Strip LLM wrapping quotes and markdown from displayed text */
 export function sanitizeAiText(value) {
   if (value == null) return ''
   let s = String(value).trim()

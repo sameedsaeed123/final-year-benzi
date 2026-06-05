@@ -8,6 +8,7 @@ const aiMessageSchema = new mongoose.Schema(
     sentimentScore: { type: Number, default: 0 },
     sentimentLabel: { type: String, default: 'neutral' },
     crisisFlag: { type: String, enum: ['high', 'medium'], default: null },
+    clearedFromHistoryAt: { type: Date, default: null },
   },
   { timestamps: true }
 )

@@ -13,6 +13,8 @@ export default defineConfig(({ mode }) => {
       react(),
     ],
     server: {
+      host: env.VITE_DEV_HOST || true,
+      port: Number(env.VITE_DEV_PORT) || 5173,
       proxy: {
         '/api': {
           target,
@@ -24,6 +26,11 @@ export default defineConfig(({ mode }) => {
               )
             })
           },
+        },
+        '/socket.io': {
+          target,
+          ws: true,
+          changeOrigin: true,
         },
       },
     },

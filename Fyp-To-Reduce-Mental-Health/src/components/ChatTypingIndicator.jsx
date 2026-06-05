@@ -1,6 +1,5 @@
 import { Sparkles, User } from 'lucide-react'
 
-/** Inline typing dots — use inside chat panels, not full-page loader */
 export default function ChatTypingIndicator({ variant = 'therapist', label }) {
   const isAi = variant === 'ai'
 

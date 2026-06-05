@@ -6,6 +6,7 @@ export default function ChatPanelHeader({
   subtitle,
   status,
   onBack,
+  action = null,
 }) {
   return (
     <div className="flex items-center gap-3 px-4 py-3 border-b border-black/8 bg-white flex-shrink-0">
@@ -26,6 +27,7 @@ export default function ChatPanelHeader({
           {status || subtitle}
         </p>
       </div>
+      {action}
     </div>
   )
 }

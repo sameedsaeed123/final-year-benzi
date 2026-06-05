@@ -12,7 +12,7 @@ export async function getLinkedTherapistForPatient(userId) {
   const [user, therapist] = await Promise.all([
     User.findById(therapistUserId).select('firstName lastName email profileImageUrl').lean(),
     Therapist.findOne({ userId: therapistUserId })
-      .select('specializationTitle qualification city waitTimeLabel experienceYears avgRating')
+      .select('specializationTitle qualification city waitTimeLabel experienceYears avgRating profileImageUrl')
       .lean(),
   ])
 
@@ -26,7 +26,7 @@ export async function getLinkedTherapistForPatient(userId) {
       id: String(therapistUserId),
       name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Therapist',
       email: user.email || '',
-      image: user.profileImageUrl || therapist?.profileImageUrl || '',
+      image: (user.profileImageUrl || therapist?.profileImageUrl || '').trim(),
       specializationTitle: therapist?.specializationTitle || '',
       qualification: therapist?.qualification || '',
       city: therapist?.city || '',
