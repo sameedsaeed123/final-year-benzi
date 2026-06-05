@@ -4,6 +4,7 @@ import {
   patientAiChat,
   getAiChatHistory,
   getPatientMoodStats,
+  logPatientMood,
   getAiDashboard,
   getTherapistPatientAiOverview,
   recommendGoals,
@@ -32,6 +33,7 @@ router.get('/analytics/me', verifyJWT, requireRoles('patient'), getPatientAnalyt
 router.get('/analytics/patient/:patientUserId', verifyJWT, requireRoles('therapist'), getPatientAnalytics)
 
 router.get('/mood/stats', verifyJWT, requireRoles('patient'), getPatientMoodStats)
+router.post('/mood/log', verifyJWT, requireRoles('patient'), logPatientMood)
 router.get('/mood/stats/:patientUserId', verifyJWT, requireRoles('therapist'), getPatientMoodStats)
 
 router.get(

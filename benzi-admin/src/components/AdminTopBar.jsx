@@ -12,13 +12,11 @@ export default function AdminTopBar() {
     <header className="sticky top-0 z-50 bg-brand text-white shadow-md border-b border-white/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-3">
         <Link to="/admin-dashboard" className="flex items-center gap-2.5 sm:gap-3 min-w-0 shrink">
-          <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-white flex items-center justify-center p-1.5 shrink-0">
-            <img
-              src="/images/Header-Logo.png"
-              alt="BENZI"
-              className="h-full w-full object-contain"
-            />
-          </div>
+          <img
+            src="/images/benzi-nav-logo.png"
+            alt="BENZI"
+            className="h-9 sm:h-10 w-auto object-contain shrink-0"
+          />
           <div className="min-w-0 hidden xs:block">
             <p className="text-[14px] sm:text-[15px] font-bold leading-tight truncate">BENZI Admin</p>
             <p className="text-[10px] text-white/70 truncate hidden sm:block">

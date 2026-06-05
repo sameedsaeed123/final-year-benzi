@@ -18,7 +18,14 @@ export default function RoleRoute({ children, allow }) {
       </div>
     )
   }
-  if (user?.role === 'patient' && patientLinked === null) return null
+
+  if (user?.role === 'patient' && patientLinked === null) {
+    return (
+      <div className="min-h-[40vh] flex items-center justify-center bg-cream">
+        <p className="text-sm text-[#7d8b7d]">Loading your portal…</p>
+      </div>
+    )
+  }
 
   if (!user) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />

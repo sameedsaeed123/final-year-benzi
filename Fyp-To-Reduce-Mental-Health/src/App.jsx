@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import Home from './pages/Home'
@@ -41,11 +41,19 @@ import PatientChatPage from './pages/patient/PatientChatPage'
 import AuthPage from './pages/AuthPage'
 import RoleRoute from './components/RoleRoute.jsx'
 import PageLoader from './components/PageLoader.jsx'
+import PortalTopBar from './components/PortalTopBar.jsx'
 
 function App() {
+  const { pathname } = useLocation()
+  const hideSiteChrome =
+    pathname.startsWith('/patient-') ||
+    (pathname.startsWith('/therapist-') &&
+      !pathname.startsWith('/therapist-checkout'))
+
   return (
     <>
-      <Navbar />
+      {!hideSiteChrome && <Navbar />}
+      {hideSiteChrome && <PortalTopBar />}
       <PageLoader />
       <Routes>
         <Route path="/" element={<Home />} />
@@ -88,7 +96,7 @@ function App() {
         <Route path="/patient-reports" element={<RoleRoute allow={['patient']}><PatientReportsPage /></RoleRoute>} />
         <Route path="/auth" element={<AuthPage />} />
       </Routes>
-      <Footer />
+      {!hideSiteChrome && <Footer />}
     </>
   )
 }

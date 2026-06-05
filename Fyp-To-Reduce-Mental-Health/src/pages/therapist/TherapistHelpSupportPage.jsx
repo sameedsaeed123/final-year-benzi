@@ -89,7 +89,7 @@ export default function TherapistHelpSupportPage() {
 
   return (
     <>
-      <div className="pt-36 max-[768px]:pt-32 max-[480px]:pt-28" />
+      <div className="pt-4" />
       <section className="bg-cream min-h-screen px-6 py-10 max-w-7xl mx-auto max-[1024px]:px-4 max-[480px]:px-3">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
           <div>

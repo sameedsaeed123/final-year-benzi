@@ -4,7 +4,7 @@ import { Bell, ChevronRight, EyeOff } from 'lucide-react'
 import PatientSidebar from '../../components/PatientSidebar'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { displayFirstName, displayFullName } from '../../lib/userDisplay.js'
-import { api, apiForm } from '../../lib/api.js'
+import { api, apiForm, resolveMediaUrl } from '../../lib/api.js'
 
 const emptyPwd = { oldPassword: '', newPassword: '', confirmPassword: '' }
 
@@ -157,7 +157,7 @@ export default function PatientProfilePage() {
       .catch(() => {})
   }, [user])
 
-  const avatarSrc = (avatar || '').trim() || '/images/therapist-profile-image.png'
+  const avatarSrc = resolveMediaUrl(avatar) || '/images/therapist-profile-image.png'
 
   const saveProfile = async (e) => {
     e.preventDefault()
@@ -247,7 +247,7 @@ export default function PatientProfilePage() {
 
   return (
     <>
-      <div className="pt-36 max-[768px]:pt-32 max-[480px]:pt-28" />
+      <div className="pt-4" />
 
       <section className="bg-cream px-6 py-12 max-[480px]:px-4 max-[480px]:py-8">
         <div className="w-[90%] mx-auto">

@@ -7,6 +7,8 @@ const aiMoodLogSchema = new mongoose.Schema(
     averageSentiment: { type: Number, default: 0 },
     messageCount: { type: Number, default: 0 },
     dominantLabel: { type: String, default: 'neutral' },
+    /** Patient manual pick: Happy | Good | Normal | Bad | Awful */
+    manualMoodLabel: { type: String, default: '' },
   },
   { timestamps: true }
 )

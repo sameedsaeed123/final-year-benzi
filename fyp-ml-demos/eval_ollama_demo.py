@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Simple Ollama eval for FYP tables — latency + therapist-deferral check."""
+"""Ollama response latency and safety checks."""
 
 import json
 import os

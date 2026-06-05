@@ -4,8 +4,8 @@ import bcrypt from 'bcryptjs'
 import { User } from '../models/User.js'
 import { normalizeMongoUri, ensureAuthSource } from '../config/database.js'
 
-const email = (process.env.SEED_ADMIN_EMAIL || 'admin@benzi.local').toLowerCase()
-const password = process.env.SEED_ADMIN_PASSWORD || 'ChangeMe!Admin1'
+const email = (process.env.SEED_ADMIN_EMAIL || 'admin@benzi.com').toLowerCase()
+const password = process.env.SEED_ADMIN_PASSWORD || 'admin123'
 
 async function run() {
   if (!process.env.MONGODB_URI) {

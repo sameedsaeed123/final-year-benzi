@@ -1,22 +1,9 @@
-/**
- * Email Template Service
- * 
- * Manages email templates using Handlebars for rendering HTML and plain-text emails.
- * Implements template caching for performance and provides validation for required variables.
- * 
- * Features:
- * - Handlebars template compilation and caching
- * - Dynamic variable injection
- * - Plain-text fallback generation
- * - Template variable validation
- * - Benzi branding (logo, colors, footer)
- */
-
 import Handlebars from 'handlebars';
 import { readFile } from 'fs/promises';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { templateIds } from '../config/email.js';
+import { getBenziLogoCidSrc } from '../utils/emailLogo.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -247,11 +234,10 @@ export async function renderTemplate(templateId, data) {
     );
   }
   
-  // Add common variables
   const templateData = {
     ...data,
     currentYear: new Date().getFullYear(),
-    logoUrl: data.logoUrl || 'https://benzi.com/logo.png', // TODO: Update with actual logo URL
+    logoUrl: data.logoUrl || getBenziLogoCidSrc(),
     preferencesUrl: data.preferencesUrl || `${process.env.FRONTEND_URL}/settings/email-preferences`,
   };
   

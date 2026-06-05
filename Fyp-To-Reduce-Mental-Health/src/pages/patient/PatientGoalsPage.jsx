@@ -208,7 +208,7 @@ export default function PatientGoalsPage() {
 
   return (
     <>
-      <div className="pt-36 max-[768px]:pt-32 max-[480px]:pt-28" />
+      <div className="pt-4" />
       <section className="bg-cream min-h-screen px-5 py-8 max-w-7xl mx-auto max-[1024px]:px-4 max-[480px]:px-3">
         <div className="grid gap-5 xl:grid-cols-[2.4fr_280px] max-[1280px]:grid-cols-1">
           <div className="space-y-5">

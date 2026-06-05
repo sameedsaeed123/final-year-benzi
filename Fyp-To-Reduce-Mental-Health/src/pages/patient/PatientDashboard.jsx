@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSocket } from '../../context/SocketContext.jsx'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { displayFirstName } from '../../lib/userDisplay.js'
 import { api } from '../../lib/api.js'
+import { useCachedGet, invalidateCache } from '../../lib/apiCache.js'
 import { Bell, ChevronRight, MessageCircle } from 'lucide-react'
 import {
   Bar,
@@ -74,34 +75,52 @@ export default function PatientDashboard() {
   const welcomeName = displayFirstName(user)
   const [selectedMood, setSelectedMood] = useState('Happy')
   const [selectedReportRange, setSelectedReportRange] = useState('12 months')
-  const [dash, setDash] = useState(null)
+  const [moodSaving, setMoodSaving] = useState(false)
+  const [moodMessage, setMoodMessage] = useState('')
   const [meetJoin, setMeetJoin] = useState({ open: false, link: '', alias: '' })
 
-  const loadDashboard = useCallback(async () => {
-    try {
-      const json = await api('/ai/dashboard/me', { method: 'GET' })
-      if (json.success && json.data) {
-        setDash(json.data)
-        const fromChat = json.data.todayMood?.fromChat
-          ? sentimentToMoodLabel(json.data.todayMood.label)
-          : null
-        if (fromChat) setSelectedMood(fromChat)
-      }
-    } catch {
-      setDash(null)
-    }
-  }, [])
+  const { data: dash, refresh: refreshDashboard } = useCachedGet('/ai/dashboard/me')
 
   useEffect(() => {
-    void loadDashboard()
-    const onMood = () => void loadDashboard()
+    const tm = dash?.todayMood
+    if (!tm) return
+    if (tm.displayMood) setSelectedMood(tm.displayMood)
+    else if (tm.fromChat) setSelectedMood(sentimentToMoodLabel(tm.label))
+    else if (tm.manualMoodLabel) setSelectedMood(tm.manualMoodLabel)
+  }, [dash])
+
+  const submitMood = async () => {
+    setMoodSaving(true)
+    setMoodMessage('')
+    try {
+      const json = await api('/ai/mood/log', {
+        method: 'POST',
+        body: JSON.stringify({ mood: selectedMood }),
+      })
+      if (json.success) {
+        setMoodMessage('Mood saved — stats updated from your input.')
+        invalidateCache('/ai/analytics')
+        window.dispatchEvent(new Event('benzi-mood-updated'))
+        await refreshDashboard()
+      } else {
+        setMoodMessage(json.message || 'Could not save mood')
+      }
+    } catch {
+      setMoodMessage('Could not save mood. Try again.')
+    } finally {
+      setMoodSaving(false)
+    }
+  }
+
+  useEffect(() => {
+    const onMood = () => void refreshDashboard()
     window.addEventListener('benzi-mood-updated', onMood)
     window.addEventListener('focus', onMood)
     return () => {
       window.removeEventListener('benzi-mood-updated', onMood)
       window.removeEventListener('focus', onMood)
     }
-  }, [loadDashboard])
+  }, [refreshDashboard])
 
   const scoreRadial = dash?.scoreRadial ?? defaultRadial
   const progressWeekly = dash?.weeklyTaskProgress ?? defaultWeekly
@@ -111,15 +130,40 @@ export default function PatientDashboard() {
   const taskScore = dash?.taskScore ?? 0
   const todayMood = dash?.todayMood
   const moodFromChat = Boolean(todayMood?.fromChat)
-  const chatMoodHint = moodFromChat
-    ? `Detected from ${todayMood.messageCount} BENZI message${todayMood.messageCount === 1 ? '' : 's'} today (${todayMood.label})`
-    : 'Chat with BENZI AI to auto-detect mood from your messages'
+  const moodFromManual = Boolean(todayMood?.fromManual)
+  const chatMoodHint = moodFromChat && moodFromManual
+    ? `Blended from BENZI chat (${todayMood.messageCount} message${todayMood.messageCount === 1 ? '' : 's'}) and your manual log`
+    : moodFromChat
+      ? `Detected from ${todayMood.messageCount} BENZI message${todayMood.messageCount === 1 ? '' : 's'} today (${todayMood.label})`
+      : moodFromManual
+        ? 'Saved from your manual mood log today'
+        : 'Pick how you feel or chat with BENZI — mood feeds your stats'
+
+  const reportChartData = useMemo(() => {
+    let rows = reportLines
+    if (selectedReportRange === '7 days') {
+      rows = (dash?.reportTrend7d || []).map((row) => ({
+        month: row.name,
+        weekly: row.mood,
+        monthly: row.messages,
+        yearly: row.hasData ? row.mood : 0,
+      }))
+    } else if (selectedReportRange === '30 days') {
+      rows = (dash?.reportTrend30d || []).map((row) => ({
+        month: row.name,
+        weekly: row.mood,
+        monthly: row.messages,
+        yearly: row.hasData ? row.mood : 0,
+      }))
+    }
+    return rows.length ? rows : [{ month: '—', weekly: 0, monthly: 0, yearly: 0 }]
+  }, [dash?.reportTrend7d, dash?.reportTrend30d, reportLines, selectedReportRange])
 
   return (
     <>
-      <div className="pt-36 max-[768px]:pt-32 max-[480px]:pt-28" />
+      <div className="pt-4" />
       <section className="bg-cream min-h-screen px-6 py-10 max-w-7xl mx-auto max-[1024px]:px-4 max-[480px]:px-3">
-        <div className="grid grid-cols-[1.4fr_280px] gap-8 max-[1024px]:grid-cols-1">
+        <div className="grid gap-8 xl:grid-cols-[1.4fr_280px] max-xl:grid-cols-1">
           <main className="space-y-8">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
@@ -188,7 +232,7 @@ export default function PatientDashboard() {
                     <p className="text-[40px] font-extrabold text-[#0f3a2b]">{taskScore}</p>
                     <p className="text-sm text-[#555]">Your Total score is</p>
                     <p className="mt-2 text-[12px] text-[#777]">
-                      {moodFromChat ? 'Includes BENZI chat sentiment' : 'Log mood via BENZI chat or goals'}
+                      {moodFromChat || moodFromManual ? 'Live from chat + mood logs' : 'Log mood or chat with BENZI to build your score'}
                     </p>
                   </div>
                 </div>
@@ -199,11 +243,12 @@ export default function PatientDashboard() {
                   <div>
                     <p className="text-sm uppercase tracking-[0.2em] text-[#7d8b7d]">Track Your Mood</p>
                     <h2 className="mt-3 text-[24px] font-semibold text-[#111]">
-                      {moodFromChat ? 'Today’s mood from chat' : 'Complete today’s log'}
+                      {moodFromChat || moodFromManual ? 'Today’s mood' : 'Complete today’s log'}
                     </h2>
                   </div>
                 </div>
                 <p className="mt-4 text-sm text-[#555]">{chatMoodHint}</p>
+                {moodMessage && <p className="mt-2 text-sm text-brand">{moodMessage}</p>}
                 <p className="mt-1 text-[12px] text-[#7d8b7d]">Or pick how you feel manually:</p>
                 <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
                   {moodOptions.map((mood) => (
@@ -219,13 +264,15 @@ export default function PatientDashboard() {
                     </button>
                   ))}
                 </div>
-                <div className="mt-5 flex justify-start">
-                  <Link
-                    to="/patient-progress"
-                    className="rounded-xl border border-black/10 bg-[#f7f5ef] px-4 py-2 text-sm text-[#111]"
+                <div className="mt-5 flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    disabled={moodSaving}
+                    onClick={() => void submitMood()}
+                    className="rounded-xl border border-black/10 bg-[#f7f5ef] px-4 py-2 text-sm font-semibold text-[#111] disabled:opacity-60"
                   >
-                    Submit
-                  </Link>
+                    {moodSaving ? 'Saving…' : 'Submit mood'}
+                  </button>
 
                   <Link
                     to="/patient-chat"
@@ -334,7 +381,7 @@ export default function PatientDashboard() {
 
               <div className="mt-8 h-72 min-h-70 min-w-0">
                 <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                  <LineChart data={reportLines} margin={{ top: 20, right: 20, left: -10, bottom: 0 }}>
+                  <LineChart data={reportChartData} margin={{ top: 20, right: 20, left: -10, bottom: 0 }}>
                     <defs>
                       <linearGradient id="weeklyLine" x1="0" y1="0" x2="1" y2="0">
                         <stop offset="0%" stopColor="#1F5F4A" stopOpacity={0.95} />

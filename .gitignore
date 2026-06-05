@@ -1,0 +1,16 @@
+# Archives (model zips are huge — share via Drive, not git)
+*.zip
+
+# Environment secrets
+.env
+benzi-server/.env
+
+# Dependencies
+node_modules/
+
+# OS junk
+.DS_Store
+
+# Large ML artifacts
+fyp-ml-demos/finetune/merged/
+*.gguf

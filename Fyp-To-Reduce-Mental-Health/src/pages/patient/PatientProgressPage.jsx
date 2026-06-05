@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { Bell, ChevronRight } from 'lucide-react'
-import { api } from '../../lib/api.js'
+import { useCachedGet } from '../../lib/apiCache.js'
 import {
   Area,
   AreaChart,
@@ -32,21 +32,21 @@ const usagePeriods = ['Monthly', 'Annually']
 export default function PatientProgressPage() {
   const { user } = useAuth()
   const welcomeName = displayFirstName(user)
-  const [analytics, setAnalytics] = useState(null)
   const [selectedUsagePeriod, setSelectedUsagePeriod] = useState('Annually')
   const [selectedReportPeriod, setSelectedReportPeriod] = useState('12 months')
 
+  // Cached: instant on repeat visits; silent background refresh.
+  const { data: analytics, refresh: refreshAnalytics } = useCachedGet('/ai/analytics/me')
+
   useEffect(() => {
-    let cancelled = false
-    api('/ai/analytics/me', { method: 'GET' })
-      .then((json) => {
-        if (!cancelled && json.success) setAnalytics(json.data)
-      })
-      .catch(() => {
-        if (!cancelled) setAnalytics(null)
-      })
-    return () => { cancelled = true }
-  }, [])
+    const onMood = () => void refreshAnalytics()
+    window.addEventListener('benzi-mood-updated', onMood)
+    window.addEventListener('focus', onMood)
+    return () => {
+      window.removeEventListener('benzi-mood-updated', onMood)
+      window.removeEventListener('focus', onMood)
+    }
+  }, [refreshAnalytics])
 
   const individualStats = analytics?.individualStats?.length ? analytics.individualStats : defaultIndividual
   const overallProgress = analytics?.overallProgress?.length
@@ -58,9 +58,28 @@ export default function PatientProgressPage() {
   const chatbotUsageData = analytics?.chatbotUsageData?.length
     ? analytics.chatbotUsageData
     : [{ day: 'Mon', value: 0 }]
-  const reportData = analytics?.reportLines?.length
-    ? analytics.reportLines
-    : [{ month: 'JAN', weekly: 0, monthly: 0, yearly: 0 }]
+  const reportData = useMemo(() => {
+    if (selectedReportPeriod === '7 days' && analytics?.reportTrend7d?.length) {
+      return analytics.reportTrend7d.map((row) => ({
+        month: row.name,
+        weekly: row.mood,
+        monthly: row.messages,
+        yearly: row.hasData ? row.mood : 0,
+      }))
+    }
+    if (selectedReportPeriod === '30 days' && analytics?.reportTrend30d?.length) {
+      return analytics.reportTrend30d.map((row) => ({
+        month: row.name,
+        weekly: row.mood,
+        monthly: row.messages,
+        yearly: row.hasData ? row.mood : 0,
+      }))
+    }
+    const lines = analytics?.reportLines?.length
+      ? analytics.reportLines
+      : [{ month: 'JAN', weekly: 0, monthly: 0, yearly: 0 }]
+    return lines
+  }, [analytics, selectedReportPeriod])
 
   const progressMonths = useMemo(
     () => overallProgress.map((p) => p.month).filter(Boolean),
@@ -76,7 +95,7 @@ export default function PatientProgressPage() {
 
   return (
     <>
-      <div className="pt-36 max-[768px]:pt-32 max-[480px]:pt-28" />
+      <div className="pt-4" />
       <section className="bg-cream min-h-screen px-6 py-10 max-w-7xl mx-auto max-[1024px]:px-4 max-[480px]:px-3">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
           <div>

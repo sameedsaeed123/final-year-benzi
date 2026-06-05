@@ -1,29 +1,24 @@
+BENZI — Appointment Confirmation
+================================
+
 Hi {{recipientName}},
 
-Your BENZI appointment has been booked successfully!
+Your appointment has been booked successfully.
 
-Appointment Details:
-------------------------------------------
-Date: {{appointmentDate}}
-Time: {{appointmentTime}}
-Therapist: {{therapistName}}
-Location: {{location}}
-{{#if meetLink}}
-Video Link: {{meetLink}}
+Date:       {{appointmentDate}}
+Time:       {{appointmentTime}}
+Therapist:  {{therapistName}}
+Location:   {{location}}
+{{#if meetLink}}Video:      {{meetLink}}
+{{/if}}Price:       Rs. {{price}}
+Payment:    {{paymentMethod}}
+Status:     {{status}}
+
+{{#if anonymousMeet}}Anonymous session: mic only; therapist sees "{{meetJoinAlias}}".
 {{/if}}
-{{#if anonymousMeet}}
-Anonymous session: mic only (camera disabled). Therapist sees you as "Anonymous" only — not your real name.
+If you paid online, status stays PENDING until your therapist verifies payment.
+
+{{#if appointmentUrl}}View appointment: {{appointmentUrl}}
 {{/if}}
-Price: Rs. {{price}}
-Payment Method: {{paymentMethod}}
-Status: {{status}}
-------------------------------------------
-
-If your payment is online, the therapist will verify your screenshot soon. We will notify you once verified.
-
-{{#if appointmentUrl}}
-View your appointment details here: {{appointmentUrl}}
-{{/if}}
-
-Best regards,
-The BENZI Team
+— The BENZI Team
+© {{currentYear}} BENZI

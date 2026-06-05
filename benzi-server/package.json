@@ -25,6 +25,7 @@
     "train:benzi-3h": "bash ../fyp-ml-demos/finetune/run_train_3h.sh",
     "train:benzi-lite": "bash ../fyp-ml-demos/finetune/run_train_lite.sh",
     "seed:plans": "node src/scripts/seedSubscriptionPlans.js",
+    "seed:partner": "npm run seed:plans && npm run seed:admin",
     "seed:all": "npm run seed:plans && npm run seed:admin && npm run seed:therapists && npm run seed:demo",
     "db:export": "node src/scripts/dbExport.mjs",
     "db:import": "node src/scripts/dbImport.mjs",

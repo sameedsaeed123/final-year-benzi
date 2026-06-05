@@ -6,6 +6,7 @@ import TherapistPatientPanel from '../../components/TherapistPatientPanel.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { displayFirstName } from '../../lib/userDisplay.js'
 import { api } from '../../lib/api.js'
+import { cachedFetch, getCached } from '../../lib/apiCache.js'
 import { useSocket } from '../../context/SocketContext.jsx'
 
 const statusStyles = {
@@ -38,13 +39,26 @@ export default function TherapistClientsPage() {
 	const { subscribeActivity } = useSocket() || {}
 
 	const load = useCallback(async () => {
-		setLoading(true)
+		// Seed instantly from cache so revisits don't show a blank/loading list.
+		const cached = getCached('/therapists/clients/me')
+		if (cached?.data) {
+			setClients(cached.data.clients || [])
+			setTotal(
+				typeof cached.data.total === 'number'
+					? cached.data.total
+					: (cached.data.clients || []).length
+			)
+			setLoading(false)
+		} else {
+			setLoading(true)
+		}
 		setError('')
 		try {
-			const json = await api('/therapists/clients/me', { method: 'GET' })
-			if (json.success && json.data) {
-				setClients(json.data.clients || [])
-				setTotal(typeof json.data.total === 'number' ? json.data.total : (json.data.clients || []).length)
+			// Loader shows only on the cold fetch; later refreshes are silent.
+			const data = await cachedFetch('/therapists/clients/me')
+			if (data) {
+				setClients(data.clients || [])
+				setTotal(typeof data.total === 'number' ? data.total : (data.clients || []).length)
 			}
 		} catch (e) {
 			setError(e.message || 'Could not load clients.')
@@ -60,11 +74,19 @@ export default function TherapistClientsPage() {
 	useEffect(() => {
 		if (!clients.length) return
 		let cancelled = false
+		// Seed instantly from cache, then revalidate silently (no loader spam).
+		const seeded = {}
+		for (const c of clients.slice(0, 20)) {
+			const hit = getCached(`/ai/overview/patient/${c.id}`)
+			if (hit?.data) seeded[c.id] = hit.data
+		}
+		if (Object.keys(seeded).length) setAiByPatient((prev) => ({ ...seeded, ...prev }))
+
 		Promise.all(
 			clients.slice(0, 20).map(async (c) => {
 				try {
-					const json = await api(`/ai/overview/patient/${c.id}`, { method: 'GET' })
-					return [c.id, json.data]
+					const data = await cachedFetch(`/ai/overview/patient/${c.id}`, { silent: true })
+					return [c.id, data]
 				} catch {
 					return [c.id, null]
 				}
@@ -160,7 +182,7 @@ export default function TherapistClientsPage() {
 
 	return (
 		<>
-			<div className="pt-36 max-[768px]:pt-32 max-[480px]:pt-28" />
+			<div className="pt-4" />
 			<section className="bg-cream min-h-screen px-6 py-10 max-w-7xl mx-auto max-[1024px]:px-4 max-[480px]:px-3">
 				<div className="flex flex-wrap items-center justify-between gap-4 mb-8">
 					<div>

@@ -37,10 +37,8 @@ export default function PatientSidebar({ activeItem = 'Dashboard' }) {
   const content = (onNavigate) => (
     <>
       <div className="px-6 pt-6 pb-2">
-        <div className="flex items-center gap-3 rounded-2xl bg-white/10 px-4 py-3">
-          <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center">
-            <img src="/images/Header-Logo.png" alt="Benzi Logo" className="h-7 w-7 object-contain" />
-          </div>
+        <div className="flex items-center gap-3 px-2 py-2">
+          <img src="/images/benzi-nav-logo.png" alt="Benzi" className="h-9 w-auto object-contain" />
           <div>
             <p className="text-[13px] font-semibold">Benzi</p>
             <p className="text-[11px] text-white/70">Patient Portal</p>

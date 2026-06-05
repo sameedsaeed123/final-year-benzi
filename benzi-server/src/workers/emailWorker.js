@@ -4,6 +4,7 @@ import nodemailer from 'nodemailer'
 import { smtpConfig, senderConfig, redisConfig, queueConfig, rateLimits } from '../config/email.js'
 import { EmailLog } from '../models/EmailLog.js'
 import { maskEmail } from '../utils/emailValidator.js'
+import { getBenziLogoAttachment } from '../utils/emailLogo.js'
 
 // Setup Redis connection for Worker
 const workerConnection = new Redis({
@@ -62,13 +63,14 @@ export const emailWorker = new Worker(
     }
 
     try {
-      // Send Email
+      const logoAttachment = await getBenziLogoAttachment()
       const info = await transporter.sendMail({
         from: `"${senderConfig.name}" <${senderConfig.address}>`,
         to,
         subject,
         html,
         text,
+        attachments: logoAttachment ? [logoAttachment] : [],
       })
 
       // Update log to sent

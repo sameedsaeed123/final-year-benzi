@@ -4,6 +4,18 @@ export function getApiBase() {
   return import.meta.env.VITE_API_URL || ''
 }
 
+export function resolveMediaUrl(url) {
+  if (!url || typeof url !== 'string') return ''
+  const trimmed = url.trim()
+  if (!trimmed) return ''
+  if (/^(https?:|data:)/i.test(trimmed)) return trimmed
+  if (trimmed.startsWith('/api/')) {
+    const base = getApiBase()
+    return base ? `${base}${trimmed}` : trimmed
+  }
+  return trimmed
+}
+
 export function getStoredToken() {
   return sessionStorage.getItem(STORAGE_KEY) || localStorage.getItem(STORAGE_KEY)
 }

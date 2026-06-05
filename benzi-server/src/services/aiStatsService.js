@@ -5,6 +5,7 @@ import { PatientAiStats } from '../models/PatientAiStats.js'
 import { Appointment } from '../models/Appointment.js'
 import { User } from '../models/User.js'
 import { processAppointmentCompletions } from './appointmentCompletionService.js'
+import { moodLabelToSentiment, sentimentLabelToMoodChip, isValidManualMood } from './moodMapping.js'
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
@@ -24,6 +25,39 @@ function dayName(date) {
   return DAYS[date.getDay() === 0 ? 6 : date.getDay() - 1]
 }
 
+function moodLogToPct(log) {
+  if (!log) return 0
+  return clampPct(((log.averageSentiment + 1) / 2) * 100)
+}
+
+function logOnCalendarDay(moodLogs, dayStart) {
+  const dayEnd = new Date(dayStart.getTime() + 86400000)
+  return moodLogs.find((m) => {
+    const md = new Date(m.date)
+    return md >= dayStart && md < dayEnd
+  })
+}
+
+function buildRollingMoodTrend(moodLogs, days) {
+  const today = startOfLocalDay()
+  const rows = []
+  for (let i = days - 1; i >= 0; i -= 1) {
+    const d = new Date(today)
+    d.setDate(d.getDate() - i)
+    const log = logOnCalendarDay(moodLogs, d)
+    rows.push({
+      name:
+        days <= 7
+          ? d.toLocaleDateString('en-US', { weekday: 'short' })
+          : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      mood: log ? moodLogToPct(log) : 0,
+      messages: log?.messageCount || 0,
+      hasData: Boolean(log),
+    })
+  }
+  return rows
+}
+
 export async function upsertTodayMoodLog(patientUserId, sentimentScore, sentimentLabel) {
   const todayStart = startOfLocalDay()
   let log = await AiMoodLog.findOne({ patientUserId, date: todayStart })
@@ -38,10 +72,46 @@ export async function upsertTodayMoodLog(patientUserId, sentimentScore, sentimen
     return
   }
   const newCount = log.messageCount + 1
-  const newAvg = (log.averageSentiment * log.messageCount + sentimentScore) / newCount
+  let newAvg = (log.averageSentiment * log.messageCount + sentimentScore) / newCount
+  if (log.manualMoodLabel) {
+    const manual = moodLabelToSentiment(log.manualMoodLabel)
+    newAvg = (newAvg * newCount + manual.score) / (newCount + 1)
+  }
   log.messageCount = newCount
   log.averageSentiment = newAvg
   log.dominantLabel = newAvg > 0.05 ? 'positive' : newAvg < -0.05 ? 'negative' : 'neutral'
+  await log.save()
+}
+
+/** Patient manual mood pick on dashboard (Happy / Good / Normal / Bad / Awful). */
+export async function upsertManualMoodLog(patientUserId, moodLabel) {
+  if (!isValidManualMood(moodLabel)) {
+    const err = new Error('Invalid mood label')
+    err.statusCode = 400
+    throw err
+  }
+  const { score, label } = moodLabelToSentiment(moodLabel)
+  const todayStart = startOfLocalDay()
+  let log = await AiMoodLog.findOne({ patientUserId, date: todayStart })
+  if (!log) {
+    await AiMoodLog.create({
+      patientUserId,
+      date: todayStart,
+      averageSentiment: score,
+      messageCount: 0,
+      dominantLabel: label,
+      manualMoodLabel: moodLabel,
+    })
+    return
+  }
+  log.manualMoodLabel = moodLabel
+  if (log.messageCount > 0) {
+    log.averageSentiment = (log.averageSentiment * log.messageCount + score) / (log.messageCount + 1)
+  } else {
+    log.averageSentiment = score
+  }
+  log.dominantLabel =
+    log.averageSentiment > 0.05 ? 'positive' : log.averageSentiment < -0.05 ? 'negative' : 'neutral'
   await log.save()
 }
 
@@ -63,10 +133,11 @@ export async function syncPatientAiStats(patientUserId) {
 }
 
 export async function buildAiAnalytics(patientUserId) {
-  const [moodLogs, goals, patientMessages] = await Promise.all([
+  const [moodLogs, goals, patientMessages, appointments] = await Promise.all([
     AiMoodLog.find({ patientUserId }).sort({ date: -1 }).limit(90).lean(),
     AiGoal.find({ patientUserId }).lean(),
     AiMessage.find({ patientUserId, sender: 'patient' }).lean(),
+    Appointment.find({ patientUserId }).lean(),
   ])
 
   const activeGoals = goals.filter((g) => g.status !== 'rejected')
@@ -84,22 +155,30 @@ export async function buildAiAnalytics(patientUserId) {
 
   const taskScore = clampPct(((avgMood + 1) / 2) * 50 + goalPct * 0.5)
 
-  const weeklyTaskProgress = DAYS.map((name) => {
-    const logsForDay = moodLogs.filter((m) => dayName(new Date(m.date)) === name)
-    const val =
-      logsForDay.length > 0
-        ? clampPct(
-            ((logsForDay.reduce((s, l) => s + (l.averageSentiment || 0), 0) / logsForDay.length + 1) / 2) *
-              100
-          )
-        : 0
-    return { name, value: val }
-  })
+  const today = startOfLocalDay()
+  const weeklyTaskProgress = []
+  for (let i = 6; i >= 0; i -= 1) {
+    const d = new Date(today)
+    d.setDate(d.getDate() - i)
+    const log = logOnCalendarDay(moodLogs, d)
+    weeklyTaskProgress.push({
+      name: d.toLocaleDateString('en-US', { weekday: 'short' }),
+      value: moodLogToPct(log),
+    })
+  }
+
+  const completedAppts = appointments.filter((a) => a.status === 'COMPLETED').length
+  const upcomingAppts = appointments.filter((a) =>
+    ['PENDING', 'CONFIRMED'].includes(a.status)
+  ).length
+  const therapyPct = clampPct(
+    completedAppts * 15 + upcomingAppts * 5 + inProgress * 8 + completedGoals * 10
+  )
 
   const progressBars = [
     { label: 'Mental Health', pct: clampPct(((avgMood + 1) / 2) * 100) },
     { label: 'Self Care', pct: clampPct(goalPct) },
-    { label: 'Therapy', pct: clampPct(inProgress > 0 ? 60 + pending * 5 : pending * 10) },
+    { label: 'Therapy', pct: therapyPct },
   ]
 
   const reportLines = MONTHS.map((month, idx) => {
@@ -138,7 +217,11 @@ export async function buildAiAnalytics(patientUserId) {
       averageSentiment: m.averageSentiment,
       messageCount: m.messageCount,
       dominantLabel: m.dominantLabel,
+      manualMoodLabel: m.manualMoodLabel || '',
     }))
+
+  const reportTrend7d = buildRollingMoodTrend(moodLogs, 7)
+  const reportTrend30d = buildRollingMoodTrend(moodLogs, 30)
 
   const overallProgress = last14Mood.map((m) => ({
     month: new Date(m.date).toLocaleString('en-US', { month: 'short' }),
@@ -191,6 +274,8 @@ export async function buildAiAnalytics(patientUserId) {
     progressCenterPct: goalPct,
     progressBars,
     reportLines,
+    reportTrend7d,
+    reportTrend30d,
     moodLogs: last14Mood,
     sentimentCounts: { negative, neutral, positive },
     goals: goals.map((g) => ({
@@ -267,6 +352,11 @@ export async function getPatientAiDashboard(patientUserId) {
         ? 'positive'
         : 'neutral')
 
+  const manualMoodLabel = todayLog?.manualMoodLabel || ''
+  const displayMood =
+    manualMoodLabel ||
+    (todayLog?.messageCount ? sentimentLabelToMoodChip(dominantMood) : '')
+
   return {
     ...analytics,
     nextAppointment,
@@ -275,6 +365,9 @@ export async function getPatientAiDashboard(patientUserId) {
       score: todayLog?.averageSentiment ?? 0,
       messageCount: todayLog?.messageCount ?? 0,
       fromChat: Boolean(todayLog?.messageCount),
+      fromManual: Boolean(manualMoodLabel),
+      manualMoodLabel,
+      displayMood,
     },
     dominantMood,
   }

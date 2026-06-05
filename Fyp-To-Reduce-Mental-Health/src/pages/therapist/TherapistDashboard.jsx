@@ -4,7 +4,7 @@ import { Bell, ChevronRight, ClipboardList, Clock, Star, Briefcase, ChevronLeft 
 import TherapistSidebar from '../../components/TherapistSidebar'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { displayFirstName } from '../../lib/userDisplay.js'
-import { api } from '../../lib/api.js'
+import { useCachedGet, cachedFetch } from '../../lib/apiCache.js'
 
 const STAT_ICONS = [Briefcase, ClipboardList, Star, Clock]
 
@@ -54,11 +54,11 @@ function useDynamicCalendar() {
 		let cancelled = false
 		const load = async () => {
 			try {
-				const json = await api(`/appointments/therapist/calendar?year=${year}&month=${month}`, { method: 'GET' })
-				if (!cancelled && json.success && json.data) {
-					setBookedDays(json.data.bookedDays || [])
-					setPendingDays(json.data.pendingDays || [])
-					setConfirmedDays(json.data.confirmedDays || [])
+				const data = await cachedFetch(`/appointments/therapist/calendar?year=${year}&month=${month}`)
+				if (!cancelled && data) {
+					setBookedDays(data.bookedDays || [])
+					setPendingDays(data.pendingDays || [])
+					setConfirmedDays(data.confirmedDays || [])
 				}
 			} catch {
 				if (!cancelled) {
@@ -109,23 +109,9 @@ export default function TherapistDashboard() {
 	const { user } = useAuth()
 	const welcomeName = displayFirstName(user)
 	const [selectedRevenuePeriod, setSelectedRevenuePeriod] = useState('Weekly')
-	const [dash, setDash] = useState(null)
 	const calendar = useDynamicCalendar()
-	useEffect(() => {
-		let cancelled = false
-		const load = async () => {
-			try {
-				const json = await api('/therapists/dashboard/me', { method: 'GET' })
-				if (!cancelled && json.success && json.data) setDash(json.data)
-			} catch {
-				if (!cancelled) setDash(null)
-			}
-		}
-		void load()
-		return () => {
-			cancelled = true
-		}
-	}, [])
+	// Cached: instant on repeat visits; silent background refresh.
+	const { data: dash } = useCachedGet('/therapists/dashboard/me')
 
 	const statCards = useMemo(() => {
 		const fromApi = dash?.statCards
@@ -151,7 +137,7 @@ export default function TherapistDashboard() {
 
 	return (
 		<>
-			<div className="pt-36 max-[768px]:pt-32 max-[480px]:pt-28" />
+			<div className="pt-4" />
 			<section className="bg-cream min-h-screen px-6 py-10 max-w-7xl mx-auto max-[1024px]:px-4 max-[480px]:px-3">
 				<div className="grid gap-6 xl:grid-cols-[1.45fr_280px] max-[1280px]:grid-cols-1">
 					<div className="space-y-6">

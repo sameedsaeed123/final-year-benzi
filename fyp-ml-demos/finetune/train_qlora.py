@@ -97,7 +97,7 @@ def main() -> None:
     model_id = args.model
     if args.quick:
         model_id = "HuggingFaceTB/SmolLM2-360M-Instruct"
-        print(f"[quick] Using small model {model_id} — for real FYP use Qwen2.5-3B or Llama-3.2-3B")
+        print(f"[quick] Using small model {model_id}")
 
     limit = None
     max_steps = args.max_steps or 300

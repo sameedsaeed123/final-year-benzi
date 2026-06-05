@@ -115,7 +115,7 @@ export default function TherapistVerificationPage() {
 
   return (
     <>
-      <div className="pt-36 max-[768px]:pt-32 max-[480px]:pt-28" />
+      <div className="pt-4" />
       <section className="bg-cream min-h-screen px-6 py-10 max-w-4xl mx-auto max-[1024px]:px-4 max-[480px]:px-3">
         <div className="rounded-[30px] border border-black/5 bg-white p-8 max-[640px]:p-6 shadow-sm">
           

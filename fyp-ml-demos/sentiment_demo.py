@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""DistilBERT sentiment — classical ML component for FYP report."""
+"""DistilBERT sentiment classification demo."""
 
 from transformers import pipeline
 

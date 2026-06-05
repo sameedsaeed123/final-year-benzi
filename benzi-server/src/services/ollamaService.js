@@ -172,6 +172,30 @@ export async function runStructuredJson(userPrompt) {
   }
 }
 
+/** Short sentiment pass for mood analytics (uses same Ollama model as chat). */
+export async function analyzeMessageSentiment(text) {
+  const snippet = String(text || '').trim().slice(0, 400)
+  if (!snippet) return null
+  try {
+    const parsed = await runStructuredJson(
+      `Analyze emotional tone of this patient wellness message. Reply JSON only: {"score": number from -1 to 1, "label": "positive"|"neutral"|"negative"}\nMessage: ${snippet}`
+    )
+    if (typeof parsed?.score !== 'number' || !parsed?.label) return null
+    const score = Math.min(1, Math.max(-1, parsed.score))
+    const label = ['positive', 'neutral', 'negative'].includes(parsed.label)
+      ? parsed.label
+      : score > 0.05
+        ? 'positive'
+        : score < -0.05
+          ? 'negative'
+          : 'neutral'
+    return { score, label, source: 'ollama' }
+  } catch (err) {
+    console.warn('[Ollama] sentiment failed:', err.message)
+    return null
+  }
+}
+
 export async function getGoalRecommendations(_patientUserId, context, patientDraft = '') {
   try {
     const raw = await chatCompletion(

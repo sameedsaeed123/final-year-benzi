@@ -4,6 +4,7 @@ import { renderTemplate } from './templateService.js'
 import { EmailLog } from '../models/EmailLog.js'
 import { validateAndNormalize, maskEmail } from '../utils/emailValidator.js'
 import { smtpConfig, senderConfig, templateIds, emailPriority, emailCategory } from '../config/email.js'
+import { getBenziLogoAttachment } from '../utils/emailLogo.js'
 
 /**
  * Dispatch Email to BullMQ Queue
@@ -45,12 +46,14 @@ export async function sendEmail({ to, templateId, data, category, priority = ema
     try {
       console.log(`[EmailService] [DevMode] Attempting direct synchronous SMTP send for ${maskedRecipient}...`)
       const transporter = nodemailer.createTransport(smtpConfig)
+      const logoAttachment = await getBenziLogoAttachment()
       const info = await transporter.sendMail({
         from: `"${senderConfig.name}" <${senderConfig.address}>`,
         to: validatedEmail,
         subject,
         html,
         text,
+        attachments: logoAttachment ? [logoAttachment] : [],
       })
 
       emailLog.status = 'sent'

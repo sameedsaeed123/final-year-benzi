@@ -1,8 +1,4 @@
-/**
- * Patient message sentiment for mood analytics.
- * Set SENTIMENT_SERVICE_URL=http://127.0.0.1:5001 to use Python DistilBERT (fyp-ml-demos).
- * Otherwise uses lightweight keyword scoring (no extra process).
- */
+import * as ollama from './ollamaService.js'
 
 const POSITIVE_WORDS = [
   'good', 'great', 'happy', 'better', 'calm', 'hopeful', 'grateful', 'motivated',
@@ -56,11 +52,25 @@ async function pythonSentiment(text) {
 }
 
 export async function analyzeSentiment(text) {
+  const trimmed = String(text || '').trim()
+  if (!trimmed) return { score: 0, label: 'neutral', source: 'empty' }
+
   try {
-    const fromPython = await pythonSentiment(text)
+    const fromPython = await pythonSentiment(trimmed)
     if (fromPython) return fromPython
   } catch (err) {
     console.warn('[Sentiment] Python service unavailable:', err.message)
   }
-  return keywordSentiment(text)
+
+  const useOllama = (process.env.LLM_PROVIDER || '').toLowerCase() === 'ollama' && trimmed.length > 8
+  if (useOllama) {
+    try {
+      const fromOllama = await ollama.analyzeMessageSentiment(trimmed)
+      if (fromOllama) return fromOllama
+    } catch (err) {
+      console.warn('[Sentiment] Ollama sentiment unavailable:', err.message)
+    }
+  }
+
+  return keywordSentiment(trimmed)
 }

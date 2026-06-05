@@ -6,6 +6,7 @@ import { linkPatientToTherapistIfEmpty } from './patientService.js'
 import { Patient } from '../models/Patient.js'
 import { sendAppointmentConfirmation, sendAppointmentPaymentUpdate, sendTherapistAppointmentNotification, sendAppointmentStatusUpdate } from './emailService.js'
 import { ensureMeetLinkForAppointment } from './googleCalendarService.js'
+import { formatPkrPrice } from '../utils/formatPrice.js'
 
 const STATUSES = ['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED']
 const LOCATIONS = ['online', 'office', 'clinic']
@@ -173,7 +174,7 @@ export async function createAppointmentByPatient(patientUserId, payload) {
         formattedTime,
         doc.status,
         doc.location,
-        doc.servicePriceAtBooking,
+        formatPkrPrice(doc.servicePriceAtBooking),
         doc.paymentMethod,
         appointmentUrl,
         doc.meetLink || '',
@@ -196,7 +197,7 @@ export async function createAppointmentByPatient(patientUserId, payload) {
         formattedDate,
         formattedTime,
         doc.location,
-        doc.servicePriceAtBooking,
+        formatPkrPrice(doc.servicePriceAtBooking),
         doc.paymentMethod,
         therapistAppUrl,
         therapistVideoLink,
@@ -298,7 +299,7 @@ export async function updateAppointmentByTherapist(appointmentId, therapistUserI
           formattedTime,
           doc.status,
           doc.paymentStatus,
-          doc.servicePriceAtBooking,
+          formatPkrPrice(doc.servicePriceAtBooking),
           appointmentUrl,
           doc.meetLink || '',
           doc.bookedAsAnonymous,

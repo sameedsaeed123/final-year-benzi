@@ -4,7 +4,7 @@ import { Bell, ChevronRight } from 'lucide-react'
 import TherapistSidebar from '../../components/TherapistSidebar'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { displayFirstName, displayFullName } from '../../lib/userDisplay.js'
-import { api, apiForm } from '../../lib/api.js'
+import { api, apiForm, resolveMediaUrl } from '../../lib/api.js'
 
 const emptyForm = {
   firstName: '',
@@ -199,8 +199,8 @@ export default function TherapistProfilePage() {
   }, [])
 
   const avatarSrc =
-    (form.userPhoto || '').trim() ||
-    (form.therapistPhotoUrl || '').trim() ||
+    resolveMediaUrl(form.userPhoto) ||
+    resolveMediaUrl(form.therapistPhotoUrl) ||
     '/images/therapist-profile-image.png'
 
   const update = (key) => (e) => {
@@ -314,7 +314,7 @@ export default function TherapistProfilePage() {
 
   return (
     <>
-      <div className="pt-36 max-[768px]:pt-32 max-[480px]:pt-28" />
+      <div className="pt-4" />
       <section className="bg-cream min-h-screen px-6 py-10 max-w-7xl mx-auto max-[1024px]:px-4 max-[480px]:px-3">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
           <div>

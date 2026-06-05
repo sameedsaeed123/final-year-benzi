@@ -13,6 +13,7 @@ import {
   getPatientAiDashboard,
   getTherapistPatientAiSummary,
   upsertTodayMoodLog,
+  upsertManualMoodLog,
   buildAiAnalytics,
 } from '../services/aiStatsService.js'
 import { syncStatsAndNotify } from '../services/aiActivityService.js'
@@ -180,6 +181,23 @@ export async function getPatientMoodStats(req, res, next) {
       .lean()
 
     return sendSuccess(res, { moodLogs }, 'OK', 200)
+  } catch (e) {
+    if (e.statusCode) return sendError(res, e.message, e.statusCode)
+    next(e)
+  }
+}
+
+export async function logPatientMood(req, res, next) {
+  try {
+    const patientUserId = req.user.id
+    const mood = String(req.body?.mood || '').trim()
+    if (!mood) return sendError(res, 'Mood label is required', 400)
+
+    await upsertManualMoodLog(patientUserId, mood)
+    await syncStatsAndNotify(patientUserId)
+
+    const dashboard = await getPatientAiDashboard(patientUserId)
+    return sendSuccess(res, { todayMood: dashboard.todayMood, taskScore: dashboard.taskScore }, 'Mood logged', 200)
   } catch (e) {
     if (e.statusCode) return sendError(res, e.message, e.statusCode)
     next(e)
@@ -537,7 +555,6 @@ export async function getPatientAnalytics(req, res, next) {
   }
 }
 
-/** LLM / Ollama readiness — no auth (for local FYP setup checks). */
 export async function getLlmHealth(req, res, next) {
   try {
     const health = await checkLlmHealth()
