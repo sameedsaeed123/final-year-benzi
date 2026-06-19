@@ -1,21 +1,4 @@
-/**
- * Email Queue Module
- * 
- * Implements BullMQ queue for asynchronous email processing with:
- * - Priority queue support (high, normal, low)
- * - Exponential backoff retry logic (1min, 5min, 30min)
- * - Rate limiting (100 emails/minute)
- * - Job persistence across server restarts
- * - Queue monitoring and metrics
- * 
- * Queue Configuration:
- * - Max retry attempts: 3
- * - Backoff: Exponential (1min, 5min, 30min)
- * - Concurrency: 5 emails
- * - Rate limit: 100 emails/minute
- * 
- * References: Design Section "Component 5: Email Queue Worker", Requirements FR-8
- */
+
 
 import { Queue } from 'bullmq';
 import Redis from 'ioredis';

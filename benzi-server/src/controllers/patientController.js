@@ -1,6 +1,6 @@
 import { sendSuccess } from '../utils/responseUtils.js'
 import { getPatientDashboard } from '../services/patientDashboardService.js'
-import { getLinkedTherapistForPatient } from '../services/patientService.js'
+import { getLinkedTherapistForPatient, getLinkedTherapistsForPatient } from '../services/patientService.js'
 import { Patient } from '../models/Patient.js'
 
 export async function patientDashboard(req, res, next) {
@@ -15,6 +15,15 @@ export async function patientDashboard(req, res, next) {
 export async function patientLinkedTherapist(req, res, next) {
   try {
     const data = await getLinkedTherapistForPatient(req.user.id)
+    return sendSuccess(res, data, 'OK', 200)
+  } catch (e) {
+    next(e)
+  }
+}
+
+export async function patientLinkedTherapists(req, res, next) {
+  try {
+    const data = await getLinkedTherapistsForPatient(req.user.id)
     return sendSuccess(res, data, 'OK', 200)
   } catch (e) {
     next(e)

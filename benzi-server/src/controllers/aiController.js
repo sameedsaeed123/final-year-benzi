@@ -27,6 +27,7 @@ import {
 } from '../services/subscriptionLimitsService.js'
 import {
   assertTherapistCanAccessPatient,
+  assertTherapistActivelyLinkedToPatient,
   resolvePatientUserId,
   resolveTherapistForPatient,
 } from '../services/aiAccessService.js'
@@ -281,7 +282,7 @@ export async function assignGoal(req, res, next) {
     if (!patientUserId || !title) {
       return sendError(res, 'patientUserId and title are required', 400)
     }
-    await assertTherapistCanAccessPatient(therapistUserId, patientUserId)
+    await assertTherapistActivelyLinkedToPatient(therapistUserId, patientUserId)
 
     const goal = await AiGoal.create({
       patientUserId,
@@ -518,7 +519,7 @@ export async function getPatientGoalInsightMe(req, res, next) {
 export async function previewTherapistGoalRecommendations(req, res, next) {
   try {
     const { patientUserId } = req.params
-    await assertTherapistCanAccessPatient(req.user.id, patientUserId)
+    await assertTherapistActivelyLinkedToPatient(req.user.id, patientUserId)
     const draft = String(req.body?.draft || '').trim()
     if (draft.length < 2) {
       return sendSuccess(res, { recommendations: [] }, 'OK', 200)

@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   BarChart3,
   CheckCircle,
+  Link2Off,
   MessageCircle,
   Target,
   X,
@@ -35,6 +36,8 @@ export default function TherapistPatientPanel({ client, onClose, onUpdated }) {
   const [goalDescription, setGoalDescription] = useState('')
   const [goalPriority, setGoalPriority] = useState('medium')
   const [assigning, setAssigning] = useState(false)
+  const [unlinking, setUnlinking] = useState(false)
+  const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false)
   const [msg, setMsg] = useState('')
   const previewTimer = useRef(null)
 
@@ -164,6 +167,24 @@ export default function TherapistPatientPanel({ client, onClose, onUpdated }) {
     }
   }
 
+  const handleUnlink = async () => {
+    if (!patientId) return
+    setUnlinking(true)
+    setMsg('')
+    try {
+      await api(`/therapists/clients/${patientId}/unlink`, { method: 'POST' })
+      setShowUnlinkConfirm(false)
+      onUpdated?.()
+      onClose?.()
+    } catch (e) {
+      setMsg(e.message || 'Could not unlink patient.')
+    } finally {
+      setUnlinking(false)
+    }
+  }
+
+  const canAssignGoals = client?.isLinked !== false
+
   const sentiment = analytics?.sentimentCounts || overview?.sentimentCounts || {
     negative: 0,
     neutral: 0,
@@ -183,8 +204,23 @@ export default function TherapistPatientPanel({ client, onClose, onUpdated }) {
             {!client?.isAnonymous && client?.email && (
               <p className="text-[12px] text-[#556b5b] mt-0.5">{client.email}</p>
             )}
+            {client?.isLinked === false && (
+              <p className="text-[11px] text-[#7a5b4b] mt-1 font-medium">Unlinked — view-only (past sessions kept)</p>
+            )}
           </div>
-          <button
+          <div className="flex items-center gap-1">
+            {client?.isLinked !== false && (
+              <button
+                type="button"
+                onClick={() => setShowUnlinkConfirm(true)}
+                className="rounded-full p-2 text-[#b42318] hover:bg-[#fef2f2]"
+                title="Unlink patient"
+                aria-label="Unlink patient"
+              >
+                <Link2Off size={18} />
+              </button>
+            )}
+            <button
             type="button"
             onClick={onClose}
             className="rounded-full p-2 text-[#7d8b7d] hover:bg-[#f0f4ee]"
@@ -192,7 +228,34 @@ export default function TherapistPatientPanel({ client, onClose, onUpdated }) {
           >
             <X size={20} />
           </button>
+          </div>
         </div>
+
+        {showUnlinkConfirm && (
+          <div className="mx-5 mt-3 rounded-2xl border border-[#fecaca] bg-[#fef2f2] p-4 text-sm">
+            <p className="font-semibold text-[#b42318]">Unlink this patient?</p>
+            <p className="text-[#7a5b4b] mt-1 text-[13px] leading-relaxed">
+              They can still book with you again later. Past appointments, reports, and stats stay saved.
+            </p>
+            <div className="flex gap-2 mt-3">
+              <button
+                type="button"
+                onClick={() => setShowUnlinkConfirm(false)}
+                className="flex-1 rounded-full border border-black/10 bg-white py-2 text-[13px] font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleUnlink()}
+                disabled={unlinking}
+                className="flex-1 rounded-full bg-[#b42318] text-white py-2 text-[13px] font-semibold disabled:opacity-60"
+              >
+                {unlinking ? 'Unlinking…' : 'Unlink'}
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="flex gap-1 px-5 pt-3 border-b border-black/5">
           {[
@@ -338,6 +401,12 @@ export default function TherapistPatientPanel({ client, onClose, onUpdated }) {
                 <p className="text-[11px] uppercase tracking-wider text-[#7d8b7d]">
                   Assign new goal
                 </p>
+                {!canAssignGoals ? (
+                  <p className="text-[13px] text-[#7a5b4b] leading-relaxed">
+                    This patient is unlinked. You can still view past stats; re-link happens when they book again.
+                  </p>
+                ) : (
+                <>
                 <input
                   type="text"
                   value={goalTitle}
@@ -402,6 +471,8 @@ export default function TherapistPatientPanel({ client, onClose, onUpdated }) {
                 >
                   {assigning ? 'Assigning…' : 'Assign to patient'}
                 </button>
+                </>
+                )}
               </div>
 
               <div>

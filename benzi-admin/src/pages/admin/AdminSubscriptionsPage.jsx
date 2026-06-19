@@ -4,7 +4,9 @@ import { Loader2 } from 'lucide-react'
 import AdminLayout from '../../components/AdminLayout.jsx'
 import AdminPageLoader from '../../components/AdminPageLoader.jsx'
 import AdminPagination from '../../components/AdminPagination.jsx'
+import AdminPanel from '../../components/AdminPanel.jsx'
 import { AdminAlert } from '../../components/AdminAlert.jsx'
+import { ADMIN_LIST_PAGE_SIZE } from '../../lib/adminPagination.js'
 import { api } from '../../lib/api.js'
 
 
@@ -21,6 +23,7 @@ export default function AdminSubscriptionsPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [assignmentTotal, setAssignmentTotal] = useState(0)
   const [assignmentTotalPages, setAssignmentTotalPages] = useState(1)
+  const [planCounts, setPlanCounts] = useState({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -36,15 +39,21 @@ export default function AdminSubscriptionsPage() {
     setError('')
     return Promise.all([
       api('/admin/subscription/plans', { method: 'GET', silent: true }),
-      api(`/admin/subscription/assignments?page=${assignPage}&limit=5`, { method: 'GET', silent: true }),
+      api(
+        `/admin/subscription/assignments?page=${assignPage}&limit=${ADMIN_LIST_PAGE_SIZE}`,
+        { method: 'GET', silent: true }
+      ),
       api('/admin/doctors?page=1&limit=100', { method: 'GET', silent: true }),
+      api('/admin/subscription/revenue', { method: 'GET', silent: true }),
     ])
-      .then(([plansJson, assignJson, docsJson]) => {
+      .then(([plansJson, assignJson, docsJson, revenueJson]) => {
         const planList = plansJson.data?.plans || []
         setPlans(planList)
         setAssignments(assignJson.data?.assignments || [])
         setAssignmentTotal(assignJson.data?.total ?? 0)
         setAssignmentTotalPages(assignJson.data?.totalPages ?? 1)
+        const distribution = revenueJson.data?.planDistribution || []
+        setPlanCounts(Object.fromEntries(distribution.map((d) => [d.planSlug, d.count])))
         const docList = docsJson.data?.doctors || []
         setDoctors(docList)
         if (!assignForm.planSlug && planList[0]) {
@@ -79,7 +88,7 @@ export default function AdminSubscriptionsPage() {
     }
   }
 
-  const countByPlan = (slug) => assignments.filter((a) => a.planSlug === slug).length
+  const countByPlan = (slug) => planCounts[slug] || 0
 
   return (
     <AdminLayout activeItem="Subscriptions" title="Subscriptions">
@@ -185,53 +194,48 @@ export default function AdminSubscriptionsPage() {
         </button>
       </form>
 
-      <div className="rounded-2xl border border-black/10 bg-white overflow-hidden shadow-sm">
-        <p className="p-4 font-semibold text-[#0f3a2b] border-b border-black/5">
-          Therapist subscriptions ({assignments.length})
-        </p>
-        {loading ? (
-          <div className="p-4">
-            <AdminPageLoader label="Loading subscriptions…" className="min-h-[160px]" />
-          </div>
-        ) : (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-[#f6f8f3] text-left text-[11px] uppercase text-[#7d8b7d]">
-                  <tr>
-                    <th className="p-3">Doctor</th>
-                    <th className="p-3">Plan</th>
-                    <th className="p-3">Limits</th>
-                    <th className="p-3">Billing</th>
-                    <th className="p-3">Expires</th>
-                    <th className="p-3">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {assignments.map((row) => (
-                    <tr key={row.id} className="border-t border-black/5">
-                      <td className="p-3">
-                        <p className="font-semibold">{row.doctor}</p>
+      {loading && !assignments.length ? (
+        <AdminPageLoader label="Loading subscriptions…" />
+      ) : (
+        <AdminPanel title={`Therapist subscriptions (${assignmentTotal})`}>
+          <div className={`overflow-x-auto -mx-5 px-5 transition-opacity ${loading ? 'opacity-50' : ''}`}>
+            <table className="min-w-full border border-black/10 text-sm">
+              <thead>
+                <tr className="text-left text-[11px] uppercase tracking-[0.15em] text-[#7d8b7d] bg-[#f7f4ef]">
+                  <th className="px-3 py-3 border border-black/10">Doctor</th>
+                  <th className="px-3 py-3 border border-black/10">Plan</th>
+                  <th className="px-3 py-3 border border-black/10">Limits</th>
+                  <th className="px-3 py-3 border border-black/10">Billing</th>
+                  <th className="px-3 py-3 border border-black/10">Expires</th>
+                  <th className="px-3 py-3 border border-black/10 text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {assignments.length > 0 ? (
+                  assignments.map((row) => (
+                    <tr key={row.id} className="text-[#3f4f41] hover:bg-[#fafbfa]">
+                      <td className="px-3 py-3 border border-black/10">
+                        <p className="font-semibold text-brand">{row.doctor}</p>
                         <p className="text-[11px] text-[#7d8b7d]">{row.email}</p>
                       </td>
-                      <td className="p-3">{row.plan}</td>
-                      <td className="p-3 text-[11px] text-[#556b5b]">
+                      <td className="px-3 py-3 border border-black/10 font-semibold">{row.plan}</td>
+                      <td className="px-3 py-3 border border-black/10 text-[11px] text-[#556b5b]">
                         {row.limits ? (
                           <>
                             {row.limits.maxPatients} patients · {row.limits.aiMessageLimitMonthly} AI
-                            msgs
+                            msgs/mo
                           </>
                         ) : (
                           '—'
                         )}
                       </td>
-                      <td className="p-3 capitalize">{row.billingInterval}</td>
-                      <td className="p-3">
+                      <td className="px-3 py-3 border border-black/10 capitalize">{row.billingInterval}</td>
+                      <td className="px-3 py-3 border border-black/10">
                         {row.expiryDate ? new Date(row.expiryDate).toLocaleDateString() : '—'}
                       </td>
-                      <td className="p-3">
+                      <td className="px-3 py-3 border border-black/10 text-center">
                         <span
-                          className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                          className={`inline-flex rounded-full px-3 py-1 text-[11px] font-semibold ${
                             statusStyles[row.status] || statusStyles.Pending
                           }`}
                         >
@@ -239,22 +243,28 @@ export default function AdminSubscriptionsPage() {
                         </span>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {!assignments.length && (
-              <p className="p-6 text-[#7d8b7d] text-sm">No therapist subscriptions yet.</p>
-            )}
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-[#7d8b7d]">
+                      No therapist subscriptions yet.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          {assignmentTotal > 0 && (
             <AdminPagination
               currentPage={currentPage}
               totalPages={assignmentTotalPages}
               totalItems={assignmentTotal}
+              pageSize={ADMIN_LIST_PAGE_SIZE}
               onPageChange={setCurrentPage}
             />
-          </>
-        )}
-      </div>
+          )}
+        </AdminPanel>
+      )}
     </AdminLayout>
   )
 }

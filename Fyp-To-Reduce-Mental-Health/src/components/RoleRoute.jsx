@@ -43,7 +43,7 @@ export default function RoleRoute({ children, allow }) {
   }
 
   if (user.role === 'patient' && patientLinked === false) {
-    const allowUnlinked = ['/patient-appointments']
+    const allowUnlinked = ['/patient-appointments', '/doctors']
     if (!allowUnlinked.includes(location.pathname)) {
       return <Navigate to="/doctors" replace />
     }

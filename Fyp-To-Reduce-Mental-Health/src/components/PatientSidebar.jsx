@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { ChevronRight, HeartPulse, ListTodo, LogOut, Menu, MessageCircle, ShieldCheck, User, BarChart3, CalendarDays, X } from 'lucide-react'
+import { ChevronRight, HeartPulse, ListTodo, LogOut, Menu, MessageCircle, ShieldCheck, User, BarChart3, CalendarDays, Stethoscope, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useSocket } from '../context/SocketContext.jsx'
 
@@ -10,13 +10,14 @@ const navItems = [
   { label: 'Goals', icon: ListTodo, to: '/patient-goals' },
   { label: 'Progress', icon: HeartPulse, to: '/patient-progress' },
   { label: 'Appointment', icon: CalendarDays, to: '/patient-appointments' },
+  { label: 'Find Doctors', icon: Stethoscope, to: '/doctors' },
   { label: 'Help & Support', icon: ShieldCheck, to: '/patient-help-support' },
   { label: 'Reports', icon: BarChart3, to: '/patient-reports' },
   { label: 'Profile', icon: User, to: '/patient-profile' },
 ]
 
 const limitedNavItems = [
-  { label: 'Book Appointment', icon: CalendarDays, to: '/doctors' },
+  { label: 'Find Doctors', icon: Stethoscope, to: '/doctors' },
   { label: 'Appointments', icon: CalendarDays, to: '/patient-appointments' },
 ]
 

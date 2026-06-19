@@ -1,14 +1,25 @@
 import mongoose from 'mongoose'
 
+const therapistLinkSchema = new mongoose.Schema(
+  {
+    therapistUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    linkedAt: { type: Date, default: Date.now },
+    unlinkedAt: { type: Date, default: null },
+  },
+  { _id: true }
+)
+
 const patientSchema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
     totalPoints: { type: Number, default: 0 },
+    /** Primary therapist — first active link (goals, AI limits default) */
     assignedTherapistUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     assignedAt: { type: Date, default: null },
-    // Anonymous mode — when true, therapist sees "Anonymous Patient" instead of real name/contact
+    /** Active / historical therapist relationships */
+    therapistLinks: { type: [therapistLinkSchema], default: [] },
     anonymousModeEnabled: { type: Boolean, default: false },
-    anonymousAlias: { type: String, default: '' }, // e.g. "Patient #A7F2"
+    anonymousAlias: { type: String, default: '' },
     reminderPreferences: {
       email24h: { type: Boolean, default: true },
       email10h: { type: Boolean, default: true },

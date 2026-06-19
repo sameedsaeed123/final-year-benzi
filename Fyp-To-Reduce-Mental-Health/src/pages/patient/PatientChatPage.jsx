@@ -28,7 +28,7 @@ export default function PatientChatPage() {
   const [searchParams, setSearchParams] = useSearchParams()
 
   const [conversations, setConversations] = useState([])
-  const [linkedTherapist, setLinkedTherapist] = useState(null)
+  const [linkedTherapists, setLinkedTherapists] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeTherapistId, setActiveTherapistId] = useState(searchParams.get('therapistId') || null)
   const [chatTab, setChatTab] = useState(searchParams.get('tab') === 'benzi' ? 'benzi' : 'therapist')
@@ -40,12 +40,14 @@ export default function PatientChatPage() {
         api('/patients/linked-therapist/me', { method: 'GET', silent: true }),
       ])
       setConversations(convJson.data?.conversations || [])
-      if (linkedJson.data?.linked && linkedJson.data?.therapist) {
-        setLinkedTherapist(linkedJson.data.therapist)
-        // Auto-open if only one therapist and no active
-        if (!activeTherapistId) {
-          setActiveTherapistId(linkedJson.data.therapist.id)
-        }
+      const therapists = linkedJson.data?.therapists?.length
+        ? linkedJson.data.therapists
+        : linkedJson.data?.therapist
+          ? [linkedJson.data.therapist]
+          : []
+      setLinkedTherapists(therapists)
+      if (!activeTherapistId && therapists.length === 1) {
+        setActiveTherapistId(therapists[0].id)
       }
     } catch {
       // ignore
@@ -88,26 +90,28 @@ export default function PatientChatPage() {
 
   // Build the therapist info for the active chat
   const activeConv = conversations.find((c) => c.therapistUserId === activeTherapistId)
-  const activeTherapistInfo = activeConv || (linkedTherapist && activeTherapistId === linkedTherapist.id ? {
-    therapistUserId: linkedTherapist.id,
-    name: linkedTherapist.name,
-    image: linkedTherapist.image,
+  const linkedMatch = linkedTherapists.find((t) => t.id === activeTherapistId)
+  const activeTherapistInfo = activeConv || (linkedMatch ? {
+    therapistUserId: linkedMatch.id,
+    name: linkedMatch.name,
+    image: linkedMatch.image,
   } : null)
 
-  // All therapists to show (linked + any from conversations)
   const allTherapists = (() => {
     const map = {}
     conversations.forEach((c) => { map[c.therapistUserId] = c })
-    if (linkedTherapist && !map[linkedTherapist.id]) {
-      map[linkedTherapist.id] = {
-        therapistUserId: linkedTherapist.id,
-        name: linkedTherapist.name,
-        image: linkedTherapist.image,
-        lastMessage: null,
-        lastAtRaw: null,
-        unread: 0,
+    linkedTherapists.forEach((t) => {
+      if (!map[t.id]) {
+        map[t.id] = {
+          therapistUserId: t.id,
+          name: t.name,
+          image: t.image,
+          lastMessage: null,
+          lastAtRaw: null,
+          unread: 0,
+        }
       }
-    }
+    })
     return Object.values(map)
   })()
 

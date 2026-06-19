@@ -6,7 +6,7 @@ import { listTherapistDirectory } from '../services/therapistDirectoryService.js
 import { getTherapistProfileForUser, updateTherapistProfileForUser } from '../services/therapistProfileService.js'
 import { therapistProfilePatchSchema } from '../validators/therapistProfileValidators.js'
 import { getTherapistAvailability, setTherapistAvailability, weeklyAvailabilitySchema } from '../services/therapistAvailabilityService.js'
-import { listClientsForTherapist } from '../services/patientService.js'
+import { listClientsForTherapist, unlinkPatientFromTherapist } from '../services/patientService.js'
 import { listActiveTherapistServices } from '../services/therapistServicesService.js'
 import { User } from '../models/User.js'
 import { Patient } from '../models/Patient.js'
@@ -148,6 +148,20 @@ export async function therapistClientsList(req, res, next) {
   }
 }
 
+export async function therapistUnlinkClient(req, res, next) {
+  try {
+    const { patientUserId } = req.params
+    if (!mongoose.Types.ObjectId.isValid(patientUserId)) {
+      return sendError(res, 'Invalid patient ID', 400)
+    }
+    const data = await unlinkPatientFromTherapist(patientUserId, req.user.id)
+    return sendSuccess(res, data, 'Patient unlinked. Records and past sessions are preserved.', 200)
+  } catch (e) {
+    if (e.statusCode) return sendError(res, e.message, e.statusCode)
+    next(e)
+  }
+}
+
 
 export async function therapistServicesPublic(req, res, next) {
   try {
@@ -211,6 +225,9 @@ export async function invitePatient(req, res, next) {
       userId: newUser._id,
       assignedTherapistUserId: req.user.id,
       assignedAt: new Date(),
+      therapistLinks: [
+        { therapistUserId: req.user.id, linkedAt: new Date(), unlinkedAt: null },
+      ],
     })
     await newPatient.save()
 

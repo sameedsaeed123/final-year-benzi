@@ -15,22 +15,27 @@ export default function AdminCouponsPage() {
   const [couponPage, setCouponPage] = useState(1)
   const [couponTotal, setCouponTotal] = useState(0)
   const [couponTotalPages, setCouponTotalPages] = useState(1)
+  const [plans, setPlans] = useState([])
   const [form, setForm] = useState({
     code: '',
     description: '',
     percentOff: '10',
-    planSlugs: '',
+    planSlug: '',
     maxRedemptions: '',
   })
 
   const load = (page = couponPage) => {
     setLoading(true)
     setError('')
-    return api(`/admin/subscription/coupons?page=${page}&limit=5`, { method: 'GET', silent: true })
-      .then((json) => {
-        setCoupons(json.data?.coupons || [])
-        setCouponTotal(json.data?.total ?? 0)
-        setCouponTotalPages(json.data?.totalPages ?? 1)
+    return Promise.all([
+      api(`/admin/subscription/coupons?page=${page}&limit=5`, { method: 'GET', silent: true }),
+      api('/admin/subscription/plans', { method: 'GET', silent: true }),
+    ])
+      .then(([couponsJson, plansJson]) => {
+        setCoupons(couponsJson.data?.coupons || [])
+        setCouponTotal(couponsJson.data?.total ?? 0)
+        setCouponTotalPages(couponsJson.data?.totalPages ?? 1)
+        setPlans(plansJson.data?.plans || [])
       })
       .catch((e) => setError(e.message || 'Failed to load coupons'))
       .finally(() => setLoading(false))
@@ -52,14 +57,12 @@ export default function AdminCouponsPage() {
           code: form.code,
           description: form.description,
           percentOff: Number(form.percentOff) || null,
-          planSlugs: form.planSlugs
-            ? form.planSlugs.split(',').map((s) => s.trim()).filter(Boolean)
-            : [],
+          planSlugs: form.planSlug ? [form.planSlug] : [],
           maxRedemptions: form.maxRedemptions ? Number(form.maxRedemptions) : null,
         }),
       })
       setSuccess(`Coupon ${form.code.toUpperCase()} created`)
-      setForm({ code: '', description: '', percentOff: '10', planSlugs: '', maxRedemptions: '' })
+      setForm({ code: '', description: '', percentOff: '10', planSlug: '', maxRedemptions: '' })
       await load()
     } catch (e) {
       setError(e.message || 'Create failed')
@@ -114,12 +117,18 @@ export default function AdminCouponsPage() {
             onChange={(e) => setForm((f) => ({ ...f, percentOff: e.target.value }))}
             className="w-full rounded-xl border border-black/10 px-3 py-2.5 text-sm"
           />
-          <input
-            placeholder="Plan slugs (benzi-pro, plus)"
-            value={form.planSlugs}
-            onChange={(e) => setForm((f) => ({ ...f, planSlugs: e.target.value }))}
-            className="w-full rounded-xl border border-black/10 px-3 py-2.5 text-sm"
-          />
+          <select
+            value={form.planSlug}
+            onChange={(e) => setForm((f) => ({ ...f, planSlug: e.target.value }))}
+            className="w-full rounded-xl border border-black/10 px-3 py-2.5 text-sm bg-white"
+          >
+            <option value="">All plans</option>
+            {plans.map((p) => (
+              <option key={p.slug} value={p.slug}>
+                {p.name}
+              </option>
+            ))}
+          </select>
           <input
             placeholder="Max redemptions (optional)"
             value={form.maxRedemptions}

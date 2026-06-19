@@ -35,6 +35,14 @@ export default function PortalTopBar() {
         </Link>
 
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {user?.role === 'patient' && (
+            <Link
+              to="/doctors"
+              className="inline-flex items-center gap-1.5 rounded-full bg-white/15 hover:bg-white/25 px-3 sm:px-4 py-2 text-[11px] sm:text-[12px] font-semibold transition"
+            >
+              Find Doctors
+            </Link>
+          )}
           <Link
             to={meta.profile}
             className="inline-flex items-center gap-2 rounded-full bg-white/15 hover:bg-white/25 pl-1 pr-3 py-1 text-[11px] sm:text-[12px] font-semibold transition max-w-[160px] sm:max-w-[200px]"

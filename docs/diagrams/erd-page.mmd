@@ -1,0 +1,115 @@
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "background": "#ffffff",
+    "mainBkg": "#ffffff",
+    "secondBkg": "#f8f8f8",
+    "primaryColor": "#ffffff",
+    "primaryTextColor": "#111111",
+    "primaryBorderColor": "#222222",
+    "lineColor": "#333333",
+    "fontSize": "12px"
+  }
+}}%%
+erDiagram
+    USER ||--o| PATIENT : "1:1"
+    USER ||--o| THERAPIST : "1:1"
+    PATIENT }o--o| THERAPIST : "assigned"
+
+    THERAPIST ||--o{ SERVICE : "1:N"
+    PATIENT ||--o{ APPOINTMENT : "1:N"
+    THERAPIST ||--o{ APPOINTMENT : "1:N"
+    SERVICE ||--o{ APPOINTMENT : "1:N"
+
+    PATIENT ||--o{ MESSAGE : "1:N"
+    THERAPIST ||--o{ MESSAGE : "1:N"
+
+    PATIENT ||--o{ RECORD : "1:N"
+    RECORD ||--o{ RECORD_CHUNK : "1:N"
+
+    PATIENT ||--o{ AI_MESSAGE : "1:N"
+    PATIENT ||--o{ AI_GOAL : "1:N"
+    THERAPIST ||--o{ AI_GOAL : "1:N"
+
+    THERAPIST ||--o| THERAPIST_SUBSCRIPTION : "1:1"
+    SUBSCRIPTION_PLAN ||--o{ THERAPIST_SUBSCRIPTION : "1:N"
+
+    USER {
+        ObjectId _id PK
+        string email
+        string role
+    }
+
+    PATIENT {
+        ObjectId _id PK
+        ObjectId userId FK
+        ObjectId assignedTherapistUserId FK
+    }
+
+    THERAPIST {
+        ObjectId _id PK
+        ObjectId userId FK
+        string verificationStatus
+    }
+
+    SERVICE {
+        ObjectId _id PK
+        ObjectId therapistUserId FK
+        string name
+        number price
+    }
+
+    APPOINTMENT {
+        ObjectId _id PK
+        ObjectId patientUserId FK
+        ObjectId therapistUserId FK
+        ObjectId serviceId FK
+        datetime date
+        string status
+    }
+
+    MESSAGE {
+        ObjectId _id PK
+        ObjectId patientUserId FK
+        ObjectId therapistUserId FK
+        ObjectId senderUserId FK
+    }
+
+    RECORD {
+        ObjectId _id PK
+        ObjectId patientUserId FK
+        string fileUrl
+        string reviewStatus
+    }
+
+    RECORD_CHUNK {
+        ObjectId _id PK
+        ObjectId recordId FK
+        array embedding
+    }
+
+    AI_MESSAGE {
+        ObjectId _id PK
+        ObjectId patientUserId FK
+        string sender
+    }
+
+    AI_GOAL {
+        ObjectId _id PK
+        ObjectId patientUserId FK
+        ObjectId therapistUserId FK
+        string status
+    }
+
+    SUBSCRIPTION_PLAN {
+        ObjectId _id PK
+        string slug
+        string name
+    }
+
+    THERAPIST_SUBSCRIPTION {
+        ObjectId _id PK
+        ObjectId therapistUserId FK
+        string planSlug
+        string status
+    }

@@ -2,7 +2,7 @@ import mongoose from 'mongoose'
 import { Appointment } from '../models/Appointment.js'
 import { User } from '../models/User.js'
 import { Service } from '../models/Service.js'
-import { linkPatientToTherapistIfEmpty } from './patientService.js'
+import { linkPatientToTherapist } from './patientService.js'
 import { Patient } from '../models/Patient.js'
 import { sendAppointmentConfirmation, sendAppointmentPaymentUpdate, sendTherapistAppointmentNotification, sendAppointmentStatusUpdate } from './emailService.js'
 import { ensureMeetLinkForAppointment } from './googleCalendarService.js'
@@ -81,13 +81,8 @@ export async function createAppointmentByPatient(patientUserId, payload) {
   }
 
   const patient = await Patient.findOne({ userId: patientUserId })
-    .select('assignedTherapistUserId anonymousModeEnabled anonymousAlias')
+    .select('anonymousModeEnabled anonymousAlias')
     .lean()
-  if (patient?.assignedTherapistUserId && String(patient.assignedTherapistUserId) !== String(therapistUserId)) {
-    const err = new Error('You can only book appointments with your assigned therapist')
-    err.statusCode = 403
-    throw err
-  }
 
   const start = new Date(date)
   const end = new Date(start.getTime() + durationMinutes * 60 * 1000)
@@ -138,7 +133,7 @@ export async function createAppointmentByPatient(patientUserId, payload) {
     patientMeetDisplayName,
   })
 
-  await linkPatientToTherapistIfEmpty(patientUserId, therapistUserId)
+  await linkPatientToTherapist(patientUserId, therapistUserId)
 
   try {
     if (doc.location === 'online') {

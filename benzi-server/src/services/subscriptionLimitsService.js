@@ -2,6 +2,7 @@ import { Patient } from '../models/Patient.js'
 import { TherapistUsage } from '../models/TherapistUsage.js'
 import { TherapistSubscription } from '../models/TherapistSubscription.js'
 import { getPlanBySlug, applySubscriptionToTherapist } from './subscriptionService.js'
+import { countActiveLinkedPatients, isPatientLinkedToTherapist } from './patientService.js'
 
 const DEFAULT_LIMITS = {
   maxPatients: 5,
@@ -79,7 +80,7 @@ async function getUsage(therapistUserId) {
 export async function getUsageSummary(therapistUserId) {
   const sub = await getEffectiveSubscription(therapistUserId)
   const usage = await getUsage(therapistUserId)
-  const patientCount = await Patient.countDocuments({ assignedTherapistUserId: therapistUserId })
+  const patientCount = await countActiveLinkedPatients(therapistUserId)
 
   return {
     planSlug: sub.planSlug,
@@ -108,7 +109,7 @@ export async function assertCanAddPatient(therapistUserId) {
   if (sub.expired) {
     throw subscriptionError('Your subscription is inactive. Renew or choose a plan to add patients.')
   }
-  const count = await Patient.countDocuments({ assignedTherapistUserId: therapistUserId })
+  const count = await countActiveLinkedPatients(therapistUserId)
   if (count >= sub.limits.maxPatients) {
     throw subscriptionError(
       `Patient limit reached (${sub.limits.maxPatients}). Upgrade your plan to add more patients.`
@@ -119,9 +120,13 @@ export async function assertCanAddPatient(therapistUserId) {
 
 export async function resolveTherapistForPatientLimits(patientUserId) {
   const patient = await Patient.findOne({ userId: patientUserId })
-    .select('assignedTherapistUserId')
+    .select('assignedTherapistUserId therapistLinks')
     .lean()
-  return patient?.assignedTherapistUserId ? String(patient.assignedTherapistUserId) : null
+  if (patient?.assignedTherapistUserId && isPatientLinkedToTherapist(patient, patient.assignedTherapistUserId)) {
+    return String(patient.assignedTherapistUserId)
+  }
+  const active = (patient?.therapistLinks || []).find((l) => !l.unlinkedAt)
+  return active?.therapistUserId ? String(active.therapistUserId) : null
 }
 
 export async function assertPatientAiChatAllowed(patientUserId) {

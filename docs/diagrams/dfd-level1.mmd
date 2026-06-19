@@ -1,0 +1,101 @@
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "background": "#ffffff",
+    "mainBkg": "#ffffff",
+    "primaryColor": "#ffffff",
+    "primaryTextColor": "#111111",
+    "primaryBorderColor": "#000000",
+    "lineColor": "#000000",
+    "fontSize": "9px"
+  },
+  "flowchart": { "padding": 4, "nodeSpacing": 12, "rankSpacing": 22, "curve": "linear" }
+}}%%
+flowchart TB
+    %% External Entities
+    E1[Patient]
+    E2[Therapist]
+    E3[Admin]
+    E4[Stripe]
+    E5[Email / AI]
+
+    %% Processes
+    P1((1.0<br/>Auth))
+    P2((2.0<br/>Appointments))
+    P3((3.0<br/>Messaging))
+    P4((4.0<br/>Records & AI))
+    P5((5.0<br/>Billing))
+    P6((6.0<br/>Notify & Admin))
+
+    %% Data Stores
+    D1[(D1 Users)]
+    D2[(D2 Appts)]
+    D3[(D3 Chat)]
+    D4[(D4 Records)]
+    D5[(D5 AI)]
+    D6[(D6 Plans)]
+    D7[(D7 Logs)]
+
+    %% Layout rows (invisible)
+    E1 ~~~ E2 ~~~ E3
+    E4 ~~~ E5
+    P1 ~~~ P2 ~~~ P3
+    P4 ~~~ P5 ~~~ P6
+    D1 ~~~ D2 ~~~ D3 ~~~ D4 ~~~ D5 ~~~ D6 ~~~ D7
+
+    %% Flows — Auth
+    E1 & E2 & E3 -->|login| P1
+    P1 <-->|data| D1
+    P1 --> P6
+
+    %% Appointments
+    E1 -->|book| P2
+    E2 -->|confirm| P2
+    P2 <-->|data| D2
+    P2 --> E5
+    P2 --> P6
+
+    %% Messaging
+    E1 & E2 <-->|msg| P3
+    P3 <-->|data| D3
+
+    %% Records & AI
+    E1 & E2 -->|file| P4
+    E1 -->|AI| P4
+    P4 <-->|data| D4
+    P4 <-->|data| D5
+    P4 --> E5
+    P4 --> P6
+
+    %% Billing
+    E2 -->|pay| P5
+    P5 <-->|data| D6
+    P5 <--> E4
+
+    %% Admin & Notify
+    E3 -->|manage| P6
+    E1 & E2 -->|ticket| P6
+    P6 <-->|data| D1
+    P6 <-->|data| D2
+    P6 <-->|data| D6
+    P6 <-->|data| D7
+    P6 --> E5
+
+    classDef entity fill:#fff,stroke:#000,stroke-width:2px,color:#000
+    classDef process fill:#fff,stroke:#000,stroke-width:1.5px,color:#000
+    classDef store fill:#fff,stroke:#000,stroke-width:1.5px,color:#000
+    class E1,E2,E3,E4,E5 entity
+    class P1,P2,P3,P4,P5,P6 process
+    class D1,D2,D3,D4,D5,D6,D7 store
+
+    linkStyle default stroke:#000,stroke-width:1px
+
+    subgraph LEG["DFD Legend"]
+        direction LR
+        L1[External Entity]
+        L2((Process))
+        L3[(Data Store)]
+        L1 ~~~ L2 ~~~ L3
+    end
+
+    style LEG fill:#fff,stroke:#ccc,color:#000

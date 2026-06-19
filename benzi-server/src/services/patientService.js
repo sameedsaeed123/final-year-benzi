@@ -1,87 +1,244 @@
 import { Patient } from '../models/Patient.js'
 import { Therapist } from '../models/Therapist.js'
 import { User } from '../models/User.js'
+import { Appointment } from '../models/Appointment.js'
 
-export async function getLinkedTherapistForPatient(userId) {
-  const patient = await Patient.findOne({ userId }).select('assignedTherapistUserId').lean()
-  const therapistUserId = patient?.assignedTherapistUserId
-  if (!therapistUserId) {
-    return { linked: false }
+function isActiveLink(link) {
+  return link && !link.unlinkedAt
+}
+
+export function getActiveTherapistIds(patient) {
+  if (!patient) return []
+  const ids = new Set()
+  for (const link of patient.therapistLinks || []) {
+    if (isActiveLink(link)) ids.add(String(link.therapistUserId))
   }
+  if (
+    patient.assignedTherapistUserId &&
+    ids.size === 0 &&
+    !(patient.therapistLinks || []).some(
+      (l) => String(l.therapistUserId) === String(patient.assignedTherapistUserId) && l.unlinkedAt
+    )
+  ) {
+    ids.add(String(patient.assignedTherapistUserId))
+  }
+  return [...ids]
+}
 
+export function isPatientLinkedToTherapist(patient, therapistUserId) {
+  if (!patient || !therapistUserId) return false
+  const tid = String(therapistUserId)
+  const explicit = (patient.therapistLinks || []).find((l) => String(l.therapistUserId) === tid)
+  if (explicit) return isActiveLink(explicit)
+  return (
+    patient.assignedTherapistUserId &&
+    String(patient.assignedTherapistUserId) === tid &&
+    !(patient.therapistLinks || []).length
+  )
+}
+
+async function buildTherapistCard(therapistUserId) {
   const [user, therapist] = await Promise.all([
     User.findById(therapistUserId).select('firstName lastName email profileImageUrl').lean(),
     Therapist.findOne({ userId: therapistUserId })
       .select('specializationTitle qualification city waitTimeLabel experienceYears avgRating profileImageUrl')
       .lean(),
   ])
+  if (!user) return null
+  return {
+    id: String(therapistUserId),
+    name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Therapist',
+    email: user.email || '',
+    image: (user.profileImageUrl || therapist?.profileImageUrl || '').trim(),
+    specializationTitle: therapist?.specializationTitle || '',
+    qualification: therapist?.qualification || '',
+    city: therapist?.city || '',
+    waitTimeLabel: therapist?.waitTimeLabel || '',
+    experienceYears: therapist?.experienceYears ?? 0,
+    avgRating: typeof therapist?.avgRating === 'number' ? therapist.avgRating : 0,
+  }
+}
 
-  if (!user) {
-    return { linked: false }
+function syncPrimaryTherapist(patientDoc) {
+  const active = (patientDoc.therapistLinks || []).filter(isActiveLink)
+  if (active.length === 0) {
+    patientDoc.assignedTherapistUserId = null
+    patientDoc.assignedAt = null
+    return
+  }
+  const primaryId = String(active[0].therapistUserId)
+  if (!patientDoc.assignedTherapistUserId || !active.some((l) => String(l.therapistUserId) === String(patientDoc.assignedTherapistUserId))) {
+    patientDoc.assignedTherapistUserId = active[0].therapistUserId
+    patientDoc.assignedAt = active[0].linkedAt || new Date()
+  }
+}
+
+async function ensureLegacyLinkMigrated(patientDoc) {
+  if (!patientDoc) return patientDoc
+  const legacyId = patientDoc.assignedTherapistUserId
+  if (!legacyId) return patientDoc
+  const hasEntry = (patientDoc.therapistLinks || []).some(
+    (l) => String(l.therapistUserId) === String(legacyId)
+  )
+  if (!hasEntry) {
+    patientDoc.therapistLinks.push({
+      therapistUserId: legacyId,
+      linkedAt: patientDoc.assignedAt || new Date(),
+      unlinkedAt: null,
+    })
+    await patientDoc.save()
+  }
+  return patientDoc
+}
+
+export async function patientHasPortalAccess(userId) {
+  const patient = await Patient.findOne({ userId }).select('therapistLinks assignedTherapistUserId').lean()
+  if (getActiveTherapistIds(patient).length > 0) return true
+  const appt = await Appointment.findOne({ patientUserId: userId }).select('_id').lean()
+  return Boolean(appt)
+}
+
+export async function countActiveLinkedPatients(therapistUserId) {
+  const patients = await Patient.find({
+    therapistLinks: {
+      $elemMatch: { therapistUserId, unlinkedAt: null },
+    },
+  })
+    .select('userId therapistLinks assignedTherapistUserId')
+    .lean()
+
+  const legacyOnly = await Patient.find({
+    assignedTherapistUserId: therapistUserId,
+    $or: [{ therapistLinks: { $exists: false } }, { therapistLinks: { $size: 0 } }],
+  })
+    .select('userId')
+    .lean()
+
+  const ids = new Set()
+  for (const p of patients) {
+    if (isPatientLinkedToTherapist(p, therapistUserId)) ids.add(String(p.userId))
+  }
+  for (const p of legacyOnly) {
+    ids.add(String(p.userId))
+  }
+  return ids.size
+}
+
+export async function getLinkedTherapistForPatient(userId) {
+  let patient = await Patient.findOne({ userId })
+  if (patient) patient = await ensureLegacyLinkMigrated(patient)
+
+  const portalAccess = await patientHasPortalAccess(userId)
+  const activeIds = getActiveTherapistIds(patient)
+
+  if (!portalAccess && activeIds.length === 0) {
+    return { linked: false, therapists: [] }
+  }
+
+  const therapists = []
+  for (const tid of activeIds) {
+    const card = await buildTherapistCard(tid)
+    if (card) therapists.push(card)
   }
 
   return {
-    linked: true,
-    therapist: {
-      id: String(therapistUserId),
-      name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Therapist',
-      email: user.email || '',
-      image: (user.profileImageUrl || therapist?.profileImageUrl || '').trim(),
-      specializationTitle: therapist?.specializationTitle || '',
-      qualification: therapist?.qualification || '',
-      city: therapist?.city || '',
-      waitTimeLabel: therapist?.waitTimeLabel || '',
-      experienceYears: therapist?.experienceYears ?? 0,
-      avgRating: typeof therapist?.avgRating === 'number' ? therapist.avgRating : 0,
-    },
+    linked: portalAccess || therapists.length > 0,
+    therapist: therapists[0] || null,
+    therapists,
+    primaryTherapistId: patient?.assignedTherapistUserId ? String(patient.assignedTherapistUserId) : null,
   }
 }
 
-export async function linkPatientToTherapistIfEmpty(patientUserId, therapistUserId) {
-  const existing = await Patient.findOne({ userId: patientUserId })
-    .select('assignedTherapistUserId')
-    .lean()
-  const isNewLink =
-    !existing?.assignedTherapistUserId ||
-    String(existing.assignedTherapistUserId) !== String(therapistUserId)
+export async function getLinkedTherapistsForPatient(userId) {
+  const data = await getLinkedTherapistForPatient(userId)
+  return { therapists: data.therapists || [], primaryTherapistId: data.primaryTherapistId || null }
+}
 
-  if (isNewLink && !existing?.assignedTherapistUserId) {
+export async function linkPatientToTherapist(patientUserId, therapistUserId) {
+  let patient = await Patient.findOne({ userId: patientUserId })
+  if (!patient) {
     const { assertCanAddPatient } = await import('./subscriptionLimitsService.js')
     await assertCanAddPatient(therapistUserId)
+    patient = await Patient.create({
+      userId: patientUserId,
+      therapistLinks: [{ therapistUserId, linkedAt: new Date(), unlinkedAt: null }],
+      assignedTherapistUserId: therapistUserId,
+      assignedAt: new Date(),
+      totalPoints: 0,
+    })
+    return
   }
 
-  const result = await Patient.updateOne(
-    {
-      userId: patientUserId,
-      $or: [{ assignedTherapistUserId: { $exists: false } }, { assignedTherapistUserId: null }],
-    },
-    {
-      $set: { assignedTherapistUserId: therapistUserId, assignedAt: new Date() },
-    }
+  await ensureLegacyLinkMigrated(patient)
+
+  const existing = (patient.therapistLinks || []).find(
+    (l) => String(l.therapistUserId) === String(therapistUserId)
   )
 
-  // If no document matched (patient record doesn't exist yet), create one
-  if (result.matchedCount === 0) {
-    const exists = await Patient.findOne({ userId: patientUserId }).select('_id').lean()
-    if (!exists) {
-      try {
-        await Patient.create({
-          userId: patientUserId,
-          assignedTherapistUserId: therapistUserId,
-          assignedAt: new Date(),
-          totalPoints: 0,
-        })
-      } catch (e) {
-        // Ignore duplicate key — another request already created the record
-        if (e.code !== 11000) throw e
-      }
-    }
+  if (existing) {
+    if (isActiveLink(existing)) return
+    existing.unlinkedAt = null
+    existing.linkedAt = new Date()
+  } else {
+    const { assertCanAddPatient } = await import('./subscriptionLimitsService.js')
+    await assertCanAddPatient(therapistUserId)
+    patient.therapistLinks.push({
+      therapistUserId,
+      linkedAt: new Date(),
+      unlinkedAt: null,
+    })
   }
+
+  if (!patient.assignedTherapistUserId) {
+    patient.assignedTherapistUserId = therapistUserId
+    patient.assignedAt = new Date()
+  }
+
+  syncPrimaryTherapist(patient)
+  await patient.save()
+}
+
+/** @deprecated use linkPatientToTherapist */
+export async function linkPatientToTherapistIfEmpty(patientUserId, therapistUserId) {
+  return linkPatientToTherapist(patientUserId, therapistUserId)
+}
+
+export async function unlinkPatientFromTherapist(patientUserId, therapistUserId) {
+  const patient = await Patient.findOne({ userId: patientUserId })
+  if (!patient) {
+    const err = new Error('Patient not found')
+    err.statusCode = 404
+    throw err
+  }
+
+  await ensureLegacyLinkMigrated(patient)
+
+  const link = (patient.therapistLinks || []).find(
+    (l) => String(l.therapistUserId) === String(therapistUserId) && isActiveLink(l)
+  )
+
+  if (!link && !isPatientLinkedToTherapist(patient, therapistUserId)) {
+    const err = new Error('Patient is not linked to you')
+    err.statusCode = 404
+    throw err
+  }
+
+  if (link) {
+    link.unlinkedAt = new Date()
+  } else {
+    patient.therapistLinks.push({
+      therapistUserId,
+      linkedAt: patient.assignedAt || new Date(),
+      unlinkedAt: new Date(),
+    })
+  }
+
+  syncPrimaryTherapist(patient)
+  await patient.save()
+  return { patientUserId: String(patientUserId), therapistUserId: String(therapistUserId) }
 }
 
 export async function listClientsForTherapist(therapistUserId) {
-  const { Appointment } = await import('../models/Appointment.js')
-
   const appointments = await Appointment.find({ therapistUserId })
     .sort({ date: -1 })
     .lean()
@@ -103,9 +260,8 @@ export async function listClientsForTherapist(therapistUserId) {
     .lean()
   const userById = Object.fromEntries(users.map((u) => [String(u._id), u]))
 
-  // Fetch anonymous status for all patients
   const patientRecords = await Patient.find({ userId: { $in: uniquePatientIds } })
-    .select('userId anonymousModeEnabled anonymousAlias')
+    .select('userId anonymousModeEnabled anonymousAlias therapistLinks assignedTherapistUserId')
     .lean()
   const patientById = Object.fromEntries(patientRecords.map((p) => [String(p.userId), p]))
 
@@ -145,15 +301,16 @@ export async function listClientsForTherapist(therapistUserId) {
     const stats = statsMap[pid] || { total: 0, lastDate: null, lastStatus: null, statuses: new Set() }
     const isAnonymous = p?.anonymousModeEnabled || false
     const alias = p?.anonymousAlias || `Patient #${pid.slice(-4).toUpperCase()}`
+    const isLinked = isPatientLinkedToTherapist(p, therapistUserId)
 
     return {
       id: pid,
-      // Mask identity if anonymous
       name: isAnonymous ? alias : (u ? `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Patient' : 'Patient'),
       email: isAnonymous ? '' : (u?.email || ''),
       phone: isAnonymous ? '' : (u?.phone || ''),
       image: isAnonymous ? '' : (u?.profileImageUrl || ''),
       isAnonymous,
+      isLinked,
       totalSessions: stats.total,
       lastSessionDate: formatDate(stats.lastDate),
       status: deriveClientStatus(stats.statuses, stats.lastStatus),

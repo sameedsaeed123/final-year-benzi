@@ -1,9 +1,10 @@
 import { Patient } from '../models/Patient.js'
 import { Appointment } from '../models/Appointment.js'
+import { isPatientLinkedToTherapist } from './patientService.js'
 
 export async function assertTherapistCanAccessPatient(therapistUserId, patientUserId) {
   const patient = await Patient.findOne({ userId: patientUserId }).lean()
-  if (patient?.assignedTherapistUserId && String(patient.assignedTherapistUserId) === String(therapistUserId)) {
+  if (isPatientLinkedToTherapist(patient, therapistUserId)) {
     return true
   }
   const appt = await Appointment.findOne({
@@ -13,6 +14,17 @@ export async function assertTherapistCanAccessPatient(therapistUserId, patientUs
   if (appt) return true
 
   const err = new Error('You do not have access to this patient')
+  err.statusCode = 403
+  throw err
+}
+
+/** Active link required — e.g. assign new goals */
+export async function assertTherapistActivelyLinkedToPatient(therapistUserId, patientUserId) {
+  const patient = await Patient.findOne({ userId: patientUserId }).lean()
+  if (isPatientLinkedToTherapist(patient, therapistUserId)) {
+    return true
+  }
+  const err = new Error('Patient is not actively linked to you')
   err.statusCode = 403
   throw err
 }
@@ -28,14 +40,16 @@ export function resolvePatientUserId(req) {
   throw err
 }
 
-/** Therapist who receives patient goal proposals */
+/** Primary therapist for patient goal proposals */
 export async function resolveTherapistForPatient(patientUserId) {
   const patient = await Patient.findOne({ userId: patientUserId })
-    .select('assignedTherapistUserId')
+    .select('assignedTherapistUserId therapistLinks')
     .lean()
-  if (patient?.assignedTherapistUserId) {
+  if (patient?.assignedTherapistUserId && isPatientLinkedToTherapist(patient, patient.assignedTherapistUserId)) {
     return String(patient.assignedTherapistUserId)
   }
+  const activeLink = (patient?.therapistLinks || []).find((l) => !l.unlinkedAt)
+  if (activeLink?.therapistUserId) return String(activeLink.therapistUserId)
   const appt = await Appointment.findOne({ patientUserId })
     .sort({ date: -1 })
     .lean()

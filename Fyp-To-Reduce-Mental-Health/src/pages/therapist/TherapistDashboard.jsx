@@ -4,7 +4,7 @@ import { Bell, ChevronRight, ClipboardList, Clock, Star, Briefcase, ChevronLeft 
 import TherapistSidebar from '../../components/TherapistSidebar'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { displayFirstName } from '../../lib/userDisplay.js'
-import { useCachedGet, cachedFetch } from '../../lib/apiCache.js'
+import { api } from '../../lib/api.js'
 
 const STAT_ICONS = [Briefcase, ClipboardList, Star, Clock]
 
@@ -54,11 +54,11 @@ function useDynamicCalendar() {
 		let cancelled = false
 		const load = async () => {
 			try {
-				const data = await cachedFetch(`/appointments/therapist/calendar?year=${year}&month=${month}`)
-				if (!cancelled && data) {
-					setBookedDays(data.bookedDays || [])
-					setPendingDays(data.pendingDays || [])
-					setConfirmedDays(data.confirmedDays || [])
+				const json = await api(`/appointments/therapist/calendar?year=${year}&month=${month}`, { method: 'GET' })
+				if (!cancelled && json.success && json.data) {
+					setBookedDays(json.data.bookedDays || [])
+					setPendingDays(json.data.pendingDays || [])
+					setConfirmedDays(json.data.confirmedDays || [])
 				}
 			} catch {
 				if (!cancelled) {
@@ -109,9 +109,24 @@ export default function TherapistDashboard() {
 	const { user } = useAuth()
 	const welcomeName = displayFirstName(user)
 	const [selectedRevenuePeriod, setSelectedRevenuePeriod] = useState('Weekly')
+	const [dash, setDash] = useState(null)
 	const calendar = useDynamicCalendar()
-	// Cached: instant on repeat visits; silent background refresh.
-	const { data: dash } = useCachedGet('/therapists/dashboard/me')
+
+	useEffect(() => {
+		let cancelled = false
+		const load = async () => {
+			try {
+				const json = await api('/therapists/dashboard/me', { method: 'GET' })
+				if (!cancelled && json.success && json.data) setDash(json.data)
+			} catch {
+				if (!cancelled) setDash(null)
+			}
+		}
+		void load()
+		return () => {
+			cancelled = true
+		}
+	}, [])
 
 	const statCards = useMemo(() => {
 		const fromApi = dash?.statCards
@@ -137,7 +152,7 @@ export default function TherapistDashboard() {
 
 	return (
 		<>
-			<div className="pt-4" />
+			<div className="pt-36 max-[768px]:pt-32 max-[480px]:pt-28" />
 			<section className="bg-cream min-h-screen px-6 py-10 max-w-7xl mx-auto max-[1024px]:px-4 max-[480px]:px-3">
 				<div className="grid gap-6 xl:grid-cols-[1.45fr_280px] max-[1280px]:grid-cols-1">
 					<div className="space-y-6">
@@ -226,7 +241,7 @@ export default function TherapistDashboard() {
 											rel="noreferrer"
 											className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#0f4e34] px-4 py-2 text-[12px] font-semibold text-white hover:bg-[#164e35]"
 										>
-											Join video session
+											Join Google Meet
 										</a>
 									)}
 								</div>
@@ -324,6 +339,59 @@ export default function TherapistDashboard() {
 							</div>
 						</div>
 
+						<div className="rounded-[30px] border border-black/5 bg-cream p-6 shadow-sm">
+							<div className="flex flex-wrap items-center justify-between gap-3">
+								<div>
+									<p className="text-sm uppercase tracking-[0.2em] text-[#7d8b7d]">Assign Task</p>
+									<h2 className="mt-2 text-[22px] font-semibold text-[#111]">Assign a task to patients</h2>
+								</div>
+								<button className="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">
+									Send Task
+								</button>
+							</div>
+
+							<div className="mt-6 grid gap-4 lg:grid-cols-2">
+								<div>
+									<label className="block text-[12px] font-semibold text-[#445445] mb-2">Patient</label>
+									<select className="w-full rounded-2xl border border-black/10 bg-[#f7f7f2] px-4 py-3 text-[13px] text-[#2e3f34] outline-none focus:border-brand focus:ring-2 focus:ring-brand/20">
+										{patientOptions.map((patient) => (
+											<option key={patient} value={patient}>{patient}</option>
+										))}
+									</select>
+								</div>
+								<div>
+									<label className="block text-[12px] font-semibold text-[#445445] mb-2">Due Date</label>
+									<input
+										type="date"
+										className="w-full rounded-2xl border border-black/10 bg-[#f7f7f2] px-4 py-3 text-[13px] text-[#2e3f34] outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
+									/>
+								</div>
+								<div>
+									<label className="block text-[12px] font-semibold text-[#445445] mb-2">Task Title</label>
+									<input
+										type="text"
+										placeholder="Write a short title"
+										className="w-full rounded-2xl border border-black/10 bg-[#f7f7f2] px-4 py-3 text-[13px] text-[#2e3f34] outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
+									/>
+								</div>
+								<div>
+									<label className="block text-[12px] font-semibold text-[#445445] mb-2">Priority</label>
+									<select className="w-full rounded-2xl border border-black/10 bg-[#f7f7f2] px-4 py-3 text-[13px] text-[#2e3f34] outline-none focus:border-brand focus:ring-2 focus:ring-brand/20">
+										<option>Low</option>
+										<option>Medium</option>
+										<option>High</option>
+									</select>
+								</div>
+								<div className="lg:col-span-2">
+									<label className="block text-[12px] font-semibold text-[#445445] mb-2">Task Details</label>
+									<textarea
+										rows={3}
+										placeholder="Write the task details for the patient..."
+										className="w-full rounded-2xl border border-black/10 bg-[#f7f7f2] px-4 py-3 text-[13px] text-[#2e3f34] outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
+									/>
+								</div>
+							</div>
+						</div>
 					</div>
 
 					<TherapistSidebar activeItem="Dashboard" />

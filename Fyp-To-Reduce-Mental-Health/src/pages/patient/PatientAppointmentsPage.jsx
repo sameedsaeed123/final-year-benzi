@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Bell, ChevronRight, Mail, MoreVertical, PhoneCall, Plus, Search, Video } from 'lucide-react'
 import PatientSidebar from '../../components/PatientSidebar'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { displayFirstName } from '../../lib/userDisplay.js'
 import { api } from '../../lib/api.js'
-import AppointmentBookingModal from '../../components/AppointmentBookingModal.jsx'
 import AnonymousMeetJoinModal from '../../components/AnonymousMeetJoinModal.jsx'
 import ListPagination, { PAGE_SIZE } from '../../components/ListPagination.jsx'
 
@@ -17,17 +16,17 @@ const statusStyles = {
 }
 
 export default function PatientAppointmentsPage() {
-  const { user, refreshGateStatus } = useAuth()
+  const { user } = useAuth()
+  const navigate = useNavigate()
   const welcomeName = displayFirstName(user)
   const [appointments, setAppointments] = useState([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [listLoading, setListLoading] = useState(true)
-  const [linkedDoctor, setLinkedDoctor] = useState(null)
+  const [linkedTherapists, setLinkedTherapists] = useState([])
   const [linkedLoading, setLinkedLoading] = useState(true)
   const [linkedError, setLinkedError] = useState('')
-  const [bookingOpen, setBookingOpen] = useState(false)
   const [meetJoin, setMeetJoin] = useState({ open: false, link: '', alias: '', videoProvider: 'jitsi' })
   const [regeneratingId, setRegeneratingId] = useState(null)
 
@@ -69,7 +68,12 @@ export default function PatientAppointmentsPage() {
       try {
         const json = await api('/patients/linked-therapist/me', { method: 'GET' })
         if (!cancelled) {
-          setLinkedDoctor(json.data?.linked ? json.data.therapist : null)
+          const list = json.data?.therapists?.length
+            ? json.data.therapists
+            : json.data?.therapist
+              ? [json.data.therapist]
+              : []
+          setLinkedTherapists(list)
         }
       } catch (e) {
         if (!cancelled) {
@@ -87,11 +91,7 @@ export default function PatientAppointmentsPage() {
   }, [])
 
   const openBooking = () => {
-    if (!linkedDoctor) {
-      setLinkedError('Please choose a doctor from the directory first.')
-      return
-    }
-    setBookingOpen(true)
+    navigate('/doctors')
   }
 
   const reloadAppointments = async () => {
@@ -167,12 +167,25 @@ export default function PatientAppointmentsPage() {
                   className="inline-flex items-center gap-2 rounded-full bg-[#0f4e34] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#164e35] disabled:opacity-60"
                 >
                   <Plus size={16} />
-                  Appointment
+                  Book with a doctor
                 </button>
               </div>
 
               {linkedError && (
                 <p className="mt-3 text-sm text-red-700">{linkedError}</p>
+              )}
+
+              {linkedTherapists.length > 0 && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {linkedTherapists.map((t) => (
+                    <span
+                      key={t.id}
+                      className="inline-flex items-center rounded-full bg-[#e8f3ea] px-3 py-1 text-[12px] font-semibold text-[#1f5f4a]"
+                    >
+                      {t.name}
+                    </span>
+                  ))}
+                </div>
               )}
 
               <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_auto] items-center">
@@ -322,16 +335,6 @@ export default function PatientAppointmentsPage() {
           <PatientSidebar activeItem="Appointment" />
         </div>
       </section>
-
-      <AppointmentBookingModal
-        open={bookingOpen}
-        doctor={linkedDoctor}
-        onClose={() => setBookingOpen(false)}
-        onBooked={async () => {
-          await refreshGateStatus()
-          await reloadAppointments()
-        }}
-      />
 
       <AnonymousMeetJoinModal
         open={meetJoin.open}

@@ -9,6 +9,7 @@ import {
   therapistAvailabilityMe,
   therapistAvailabilityPatch,
   therapistClientsList,
+  therapistUnlinkClient,
   therapistServicesPublic,
   invitePatient,
 } from '../controllers/therapistController.js'
@@ -27,6 +28,7 @@ router.get('/profile/me', verifyJWT, requireRoles('therapist'), therapistProfile
 router.patch('/profile/me', verifyJWT, requireRoles('therapist'), therapistProfilePatch)
 router.get('/dashboard/me', verifyJWT, requireRoles('therapist'), therapistDashboard)
 router.get('/clients/me', verifyJWT, requireRoles('therapist'), therapistClientsList)
+router.post('/clients/:patientUserId/unlink', verifyJWT, requireRoles('therapist'), therapistUnlinkClient)
 router.post('/clients/invite', verifyJWT, requireRoles('therapist'), invitePatient)
 
 router.get('/availability/me', verifyJWT, requireRoles('therapist'), therapistAvailabilityMe)

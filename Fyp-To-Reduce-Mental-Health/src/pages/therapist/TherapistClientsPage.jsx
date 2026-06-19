@@ -291,6 +291,11 @@ export default function TherapistClientsPage() {
 																	<EyeOff size={9} /> Anonymous
 																</span>
 															)}
+															{item.isLinked === false && (
+																<span className="ml-2 inline-flex rounded-full bg-[#f6f1ec] px-2 py-0.5 text-[10px] font-semibold text-[#7a5b4b]">
+																	Unlinked
+																</span>
+															)}
 														</div>
 													</div>
 												</td>
