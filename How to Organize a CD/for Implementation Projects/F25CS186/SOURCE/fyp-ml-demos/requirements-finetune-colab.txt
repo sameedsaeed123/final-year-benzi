@@ -1,0 +1,7 @@
+# Colab GPU — do NOT pin numpy<2 (Colab preinstalls need numpy 2.x)
+datasets>=2.19.0
+peft>=0.11.0
+accelerate>=0.30.0
+sentencepiece>=0.2.0
+protobuf>=4.25.0
+tqdm>=4.66.0

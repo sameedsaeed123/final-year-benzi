@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{subject}}</title>
+  <style>
+    body { margin:0; padding:0; background:#eef2eb; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif; color:#1a2e24; }
+    .wrap { max-width:600px; margin:0 auto; background:#fff; }
+    .header { background:linear-gradient(135deg,#0f3a2b 0%,#1F5F4A 100%); padding:28px 24px; text-align:center; }
+    .logo-img { height:42px; width:auto; display:block; margin:0 auto; }
+    .tagline { color:rgba(255,255,255,0.85); font-size:12px; margin:14px 0 0; letter-spacing:0.12em; text-transform:uppercase; }
+    .content { padding:32px 28px; }
+    .greeting { font-size:22px; font-weight:700; color:#0f3a2b; margin:0 0 16px; }
+    .body-text { font-size:15px; line-height:1.65; color:#3d5c4d; margin:0 0 16px; }
+    .cta-button { display:inline-block; background:#1F5F4A; color:#fff !important; text-decoration:none; font-weight:700; padding:14px 32px; border-radius:999px; margin:20px 0; }
+    .info-box { background:#f8f7f3; border-left:4px solid #1F5F4A; border-radius:12px; padding:16px 20px; margin:18px 0; }
+    .info-box p { margin:6px 0; font-size:14px; color:#1a2e24; }
+    .code-display { background:#f8f7f3; border:2px solid #1F5F4A; border-radius:12px; padding:20px; text-align:center; margin:20px 0; }
+    .code-value { font-size:32px; font-weight:bold; color:#1F5F4A; letter-spacing:8px; font-family:monospace; }
+    .footer { background:#0f3a2b; color:rgba(255,255,255,0.9); text-align:center; padding:24px; font-size:12px; }
+    .footer a { color:#97BFA5; text-decoration:none; margin:0 8px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <img src="{{logoUrl}}" alt="BENZI" class="logo-img" width="140" height="42" style="display:block;margin:0 auto;border:0;height:42px;width:auto;max-width:160px;" />
+      <p class="tagline">Mental Health Platform</p>
+    </div>
+    {{{content}}}
+    <div class="footer">
+      <p><strong>BENZI</strong> Mental Health Platform</p>
+      <p>&copy; {{currentYear}} BENZI. All rights reserved.</p>
+      <p>
+        <a href="{{preferencesUrl}}">Email Preferences</a>
+        <a href="mailto:support@benzi.com">Support</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>

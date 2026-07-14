@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #1F5F4A;
+  --color-brand-dark: #174d3c;
+  --color-cream: #FBF6F0;
+  --font-sans: 'Segoe UI', system-ui, sans-serif;
+
+  --animate-spin-slow: spin 8s linear infinite;
+  --animate-float: float 3s ease-in-out infinite;
+  --animate-fade-up: fade-up 0.7s ease-out both;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes fade-up {
+  0%   { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  background-color: #FBF6F0;
+}
+
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

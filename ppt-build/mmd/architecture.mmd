@@ -1,0 +1,72 @@
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "background": "#ffffff",
+    "fontFamily": "arial, helvetica, sans-serif",
+    "fontSize": "15px",
+    "primaryColor": "#E9F6F3",
+    "primaryTextColor": "#13322F",
+    "primaryBorderColor": "#0F766E",
+    "lineColor": "#0D9488",
+    "clusterBkg": "#F6FCFB",
+    "clusterBorder": "#BFE0DB"
+  },
+  "flowchart": { "htmlLabels": false, "padding": 14, "nodeSpacing": 45, "rankSpacing": 55, "curve": "basis" }
+}}%%
+flowchart TB
+    subgraph Clients["CLIENT APPS"]
+        direction LR
+        W["Patient / Therapist<br/>Web App<br/>React + Vite"]
+        A["Admin Dashboard<br/>benzi-admin"]
+    end
+
+    subgraph Server["BENZI SERVER · Node.js + Express"]
+        direction TB
+        API["REST API<br/>/api/*"]
+        WS["Socket.IO<br/>Real-time Chat"]
+        SVC["Business Services<br/>Auth · Appointments · Records · AI · Billing"]
+        JOB["Background Jobs<br/>Cron · Email Worker"]
+    end
+
+    subgraph AIBox["BENZI AI ENGINE"]
+        direction LR
+        OLL["Ollama<br/>Fine-tuned Qwen2.5"]
+        CR["Crisis Detection"]
+        RAG["RAG Vector Search"]
+    end
+
+    subgraph Storage["DATA"]
+        direction LR
+        DB[("MongoDB")]
+        R[("Redis")]
+        FS[("File Storage<br/>uploads/")]
+    end
+
+    subgraph External["EXTERNAL SERVICES"]
+        direction LR
+        ST["Stripe<br/>Billing"]
+        G["Google<br/>Calendar"]
+        EM["SMTP<br/>Email"]
+        V["Video Meet"]
+    end
+
+    W -->|HTTPS + JWT| API
+    W -->|WebSocket| WS
+    A -->|HTTPS + JWT| API
+    API --> SVC
+    WS --> SVC
+    SVC --> AIBox
+    SVC --> DB
+    SVC --> FS
+    JOB --> R
+    JOB --> EM
+    SVC --> ST
+    SVC --> G
+    SVC --> V
+
+    classDef box fill:#E9F6F3,stroke:#0F766E,color:#13322F,stroke-width:1.5px
+    classDef ai fill:#0F766E,stroke:#0B3B38,color:#ffffff,stroke-width:1.5px
+    classDef store fill:#D7EEEA,stroke:#0F766E,color:#13322F,stroke-width:1.5px
+    class W,A,API,WS,SVC,JOB,ST,G,EM,V box
+    class OLL,CR,RAG ai
+    class DB,R,FS store

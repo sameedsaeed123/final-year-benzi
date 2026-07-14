@@ -1,0 +1,6 @@
+node_modules
+.env
+*.log
+THERAPIST_SEED_CREDENTIALS.md
+uploads/
+data/

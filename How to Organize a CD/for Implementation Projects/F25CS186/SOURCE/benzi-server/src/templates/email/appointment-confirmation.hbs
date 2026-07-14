@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Appointment Booking Confirmed</title>
+  <style>
+    body { margin:0; padding:0; background:#eef2eb; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif; color:#1a2e24; }
+    .wrap { max-width:600px; margin:0 auto; background:#ffffff; }
+    .header { background:linear-gradient(135deg,#0f3a2b 0%,#1F5F4A 100%); padding:28px 24px; text-align:center; }
+    .logo-img { height:42px; width:auto; display:block; margin:0 auto; }
+    .tagline { color:rgba(255,255,255,0.85); font-size:12px; margin:14px 0 0; letter-spacing:0.12em; text-transform:uppercase; }
+    .hero { background:#f8f7f3; padding:32px 28px 20px; border-bottom:1px solid #e4e8df; }
+    .hero h1 { margin:0 0 10px; font-size:24px; color:#0f3a2b; }
+    .hero p { margin:0; font-size:15px; line-height:1.65; color:#3d5c4d; }
+    .content { padding:28px; }
+    .card { background:#f8f7f3; border:1px solid #e4e8df; border-left:4px solid #1F5F4A; border-radius:12px; padding:20px 22px; margin:20px 0; }
+    .row { display:flex; gap:10px; padding:8px 0; border-bottom:1px solid #e8ece4; font-size:14px; }
+    .row:last-child { border-bottom:none; }
+    .label { min-width:130px; font-weight:700; color:#1F5F4A; }
+    .value { color:#1a2e24; word-break:break-word; }
+    .value a { color:#1F5F4A; }
+    .badge { display:inline-block; background:#e7f1e8; color:#0f3a2b; font-size:12px; font-weight:700; padding:4px 10px; border-radius:999px; text-transform:uppercase; }
+    .note { background:#fff8e6; border:1px solid #f0e0b8; border-radius:10px; padding:14px 16px; font-size:13px; color:#6b5a2e; line-height:1.55; margin:18px 0; }
+    .cta-wrap { text-align:center; margin:28px 0 12px; }
+    .cta { display:inline-block; background:#1F5F4A; color:#fff !important; text-decoration:none; font-weight:700; font-size:15px; padding:14px 32px; border-radius:999px; }
+    .sign { font-size:14px; color:#556b5b; line-height:1.6; margin-top:24px; }
+    .footer { background:#0f3a2b; color:rgba(255,255,255,0.9); text-align:center; padding:24px 20px; font-size:12px; }
+    .footer a { color:#97BFA5; text-decoration:none; margin:0 8px; }
+    @media (max-width:600px) {
+      .hero, .content { padding:22px 18px; }
+      .row { flex-direction:column; gap:2px; }
+      .label { min-width:0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <img src="{{logoUrl}}" alt="BENZI" class="logo-img" width="140" height="42" style="display:block;margin:0 auto;border:0;height:42px;width:auto;max-width:160px;" />
+      <p class="tagline">Mental Health Platform</p>
+    </div>
+
+    <div class="hero">
+      <h1>Hi {{recipientName}},</h1>
+      <p>Your appointment has been booked successfully. Here are your session details.</p>
+    </div>
+
+    <div class="content">
+      <div class="card">
+        <div class="row"><span class="label">📅 Date</span><span class="value">{{appointmentDate}}</span></div>
+        <div class="row"><span class="label">🕐 Time</span><span class="value">{{appointmentTime}}</span></div>
+        <div class="row"><span class="label">👤 Therapist</span><span class="value">{{therapistName}}</span></div>
+        <div class="row"><span class="label">📍 Location</span><span class="value">{{location}}</span></div>
+        {{#if meetLink}}
+        <div class="row"><span class="label">🎥 Video</span><span class="value"><a href="{{meetLink}}">{{meetLink}}</a></span></div>
+        {{/if}}
+        <div class="row"><span class="label">💵 Price</span><span class="value">Rs. {{price}}</span></div>
+        <div class="row"><span class="label">💳 Payment</span><span class="value">{{paymentMethod}}</span></div>
+        <div class="row"><span class="label">🔔 Status</span><span class="value"><span class="badge">{{status}}</span></span></div>
+      </div>
+
+      {{#if anonymousMeet}}
+      <div class="note">
+        <strong>Anonymous video session:</strong> Join via the BENZI link above (not Google Meet). Microphone only — camera is disabled. Your therapist sees you as &quot;{{meetJoinAlias}}&quot;, not your real name.
+      </div>
+      {{/if}}
+
+      <div class="note">
+        If you paid online, your booking stays <strong>PENDING</strong> until your therapist verifies your payment receipt. You will receive another email once confirmed.
+      </div>
+
+      {{#if appointmentUrl}}
+      <div class="cta-wrap">
+        <a href="{{appointmentUrl}}" class="cta">View Appointment</a>
+      </div>
+      {{/if}}
+
+      <p class="sign">
+        Thank you for trusting BENZI with your mental wellness journey.<br>
+        <strong>The BENZI Team</strong>
+      </p>
+    </div>
+
+    <div class="footer">
+      <p><strong>BENZI</strong> · Mental Health Platform</p>
+      <p>&copy; {{currentYear}} BENZI. All rights reserved.</p>
+      <p>
+        <a href="{{preferencesUrl}}">Email preferences</a>
+        <a href="mailto:support@benzi.com">Support</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>

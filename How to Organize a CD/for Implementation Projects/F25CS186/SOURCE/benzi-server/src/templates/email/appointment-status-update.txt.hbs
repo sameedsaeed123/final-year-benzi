@@ -1,0 +1,32 @@
+Hi {{recipientName}},
+
+The status of your appointment with {{therapistName}} has been updated.
+
+Updated Statuses:
+------------------------------------------
+Appointment Status: {{status}}
+Payment Status: {{paymentStatus}}
+------------------------------------------
+
+Session Details:
+------------------------------------------
+Date: {{appointmentDate}}
+Time: {{appointmentTime}}
+Therapist: {{therapistName}}
+{{#if meetLink}}
+Video Link: {{meetLink}}
+{{/if}}
+{{#if anonymousMeet}}
+Anonymous join: mic only, camera disabled. Therapist sees "Anonymous" only.
+{{/if}}
+Price: Rs. {{price}}
+------------------------------------------
+
+Please check your patient dashboard for the latest details regarding your sessions.
+
+{{#if appointmentUrl}}
+View appointment details here: {{appointmentUrl}}
+{{/if}}
+
+Best regards,
+The BENZI Team

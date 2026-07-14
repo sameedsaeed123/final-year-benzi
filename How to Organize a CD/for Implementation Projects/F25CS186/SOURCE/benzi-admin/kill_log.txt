@@ -1,0 +1,2 @@
+[ClearPort] PIDs found: 90536
+✓ Successfully killed process 90536

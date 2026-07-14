@@ -1,0 +1,12 @@
+{
+  "name": "benzi-workspace",
+  "private": true,
+  "description": "Run API + Vite together to avoid 502 (proxy with no backend).",
+  "scripts": {
+    "dev": "concurrently -k -n api,web -c blue,green \"npm run dev --prefix benzi-server\" \"npm run dev --prefix Fyp-To-Reduce-Mental-Health\"",
+    "test:api": "npm run test:api --prefix benzi-server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

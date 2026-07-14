@@ -1,0 +1,194 @@
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "background": "#ffffff",
+    "mainBkg": "#ffffff",
+    "secondBkg": "#f8f8f8",
+    "primaryColor": "#ffffff",
+    "primaryTextColor": "#111111",
+    "primaryBorderColor": "#222222",
+    "lineColor": "#333333",
+    "fontSize": "11px"
+  }
+}}%%
+erDiagram
+    %% ── Identity ──
+    USER ||--o| PATIENT : "1:1"
+    USER ||--o| THERAPIST : "1:1"
+    PATIENT }o--o| THERAPIST : "assigned to"
+
+    %% ── Appointments ──
+    THERAPIST ||--o{ SERVICE : offers
+    PATIENT ||--o{ APPOINTMENT : books
+    THERAPIST ||--o{ APPOINTMENT : hosts
+    SERVICE ||--o{ APPOINTMENT : "booked for"
+    APPOINTMENT ||--o{ APPOINTMENT_REMINDER : triggers
+
+    %% ── Communication ──
+    PATIENT ||--o{ MESSAGE : "thread"
+    THERAPIST ||--o{ MESSAGE : "thread"
+
+    %% ── Records & RAG ──
+    PATIENT ||--o{ RECORD : owns
+    RECORD ||--o{ RECORD_CHUNK : "vector index"
+
+    %% ── AI ──
+    PATIENT ||--o{ AI_MESSAGE : "Benzi AI chat"
+    PATIENT ||--o{ AI_MOOD_LOG : "daily mood"
+    PATIENT ||--o{ AI_GOAL : goals
+    THERAPIST ||--o{ AI_GOAL : assigns
+    PATIENT ||--o| PATIENT_AI_STATS : "progress"
+
+    %% ── Billing ──
+    THERAPIST ||--o| THERAPIST_SUBSCRIPTION : subscribes
+    SUBSCRIPTION_PLAN ||--o{ THERAPIST_SUBSCRIPTION : "plan slug"
+    COUPON ||--o{ THERAPIST_SUBSCRIPTION : discount
+    THERAPIST ||--o{ THERAPIST_USAGE : "monthly AI quota"
+
+    %% ── Auth & Support (standalone) ──
+    USER ||--o| TWO_FACTOR_AUTH : "2FA"
+    USER ||--o{ PASSWORD_RESET_TOKEN : reset
+    APPOINTMENT_REMINDER }o--|| EMAIL_LOG : "email sent"
+
+    USER {
+        ObjectId _id PK
+        string email UK
+        enum role
+        enum status
+    }
+
+    PATIENT {
+        ObjectId _id PK
+        ObjectId userId FK
+        ObjectId assignedTherapistUserId FK
+        bool anonymousMode
+    }
+
+    THERAPIST {
+        ObjectId _id PK
+        ObjectId userId FK
+        enum verificationStatus
+        json weeklyAvailability
+    }
+
+    SERVICE {
+        ObjectId _id PK
+        ObjectId therapistUserId FK
+        string name
+        number pricePerSession
+    }
+
+    APPOINTMENT {
+        ObjectId _id PK
+        ObjectId patientUserId FK
+        ObjectId therapistUserId FK
+        ObjectId serviceId FK
+        datetime date
+        enum status
+        enum paymentStatus
+    }
+
+    APPOINTMENT_REMINDER {
+        ObjectId _id PK
+        ObjectId appointmentId FK
+        int hoursBefore
+        bool sent
+    }
+
+    MESSAGE {
+        ObjectId _id PK
+        ObjectId patientUserId FK
+        ObjectId therapistUserId FK
+        ObjectId senderUserId FK
+        string type
+    }
+
+    RECORD {
+        ObjectId _id PK
+        ObjectId patientUserId FK
+        string fileUrl
+        enum reviewStatus
+    }
+
+    RECORD_CHUNK {
+        ObjectId _id PK
+        ObjectId recordId FK
+        array embedding
+    }
+
+    AI_MESSAGE {
+        ObjectId _id PK
+        ObjectId patientUserId FK
+        enum sender
+        string text
+    }
+
+    AI_MOOD_LOG {
+        ObjectId _id PK
+        ObjectId patientUserId FK
+        date date UK
+    }
+
+    AI_GOAL {
+        ObjectId _id PK
+        ObjectId patientUserId FK
+        ObjectId therapistUserId FK
+        enum status
+    }
+
+    PATIENT_AI_STATS {
+        ObjectId _id PK
+        ObjectId userId FK
+        number taskScore
+    }
+
+    SUBSCRIPTION_PLAN {
+        ObjectId _id PK
+        string slug UK
+        string name
+        number priceMonthlyCents
+    }
+
+    THERAPIST_SUBSCRIPTION {
+        ObjectId _id PK
+        ObjectId therapistUserId FK
+        string planSlug
+        enum status
+    }
+
+    THERAPIST_USAGE {
+        ObjectId _id PK
+        ObjectId therapistUserId FK
+        string periodKey
+    }
+
+    COUPON {
+        ObjectId _id PK
+        string code UK
+        number percentOff
+    }
+
+    TWO_FACTOR_AUTH {
+        ObjectId _id PK
+        ObjectId userId FK
+        bool enabled
+    }
+
+    PASSWORD_RESET_TOKEN {
+        ObjectId _id PK
+        ObjectId userId FK
+        datetime expiresAt
+    }
+
+    EMAIL_LOG {
+        ObjectId _id PK
+        string recipient
+        enum status
+    }
+
+    TICKET {
+        ObjectId _id PK
+        string ticketId UK
+        string email
+        enum status
+    }

@@ -1,0 +1,22 @@
+=== BENZI BACKEND DEEP DIAGNOSTICS ===
+
+Found 10 email logs in DB:
+[#1] Time: 2026-05-18T11:09:34.187Z | Recipient: sam***@gmail.com | Subject: Reset Your BENZI Password | Status: SENT | JobId: 30 | Error: None
+[#2] Time: 2026-05-18T11:06:02.491Z | Recipient: sam***@gmail.com | Subject: Reset Your BENZI Password | Status: FAILED | JobId: null | Error: Connection is closed.
+[#3] Time: 2026-05-18T11:04:22.068Z | Recipient: sam***@gmail.com | Subject: Reset Your BENZI Password | Status: FAILED | JobId: null | Error: Connection is closed.
+[#4] Time: 2026-05-18T10:57:27.951Z | Recipient: the***@gmail.com | Subject: Your Support Ticket Has Been Resolved - #{ticketId} | Status: SENT | JobId: 29 | Error: None
+[#5] Time: 2026-05-18T10:57:27.492Z | Recipient: the***@gmail.com | Subject: New Reply on Your Support Ticket #{ticketId} | Status: SENT | JobId: 28 | Error: None
+[#6] Time: 2026-05-18T10:57:27.030Z | Recipient: the***@gmail.com | Subject: Support Ticket Created - #{ticketId} | Status: SENT | JobId: 27 | Error: None
+[#7] Time: 2026-05-18T10:57:26.570Z | Recipient: the***@gmail.com | Subject: Welcome to BENZI - Your Account Details | Status: SENT | JobId: 26 | Error: None
+[#8] Time: 2026-05-18T10:57:26.110Z | Recipient: the***@gmail.com | Subject: Update on Your BENZI Verification | Status: SENT | JobId: 25 | Error: None
+[#9] Time: 2026-05-18T10:57:25.650Z | Recipient: the***@gmail.com | Subject: Congratulations! Your BENZI Verification is Approved | Status: SENT | JobId: 24 | Error: None
+[#10] Time: 2026-05-18T10:57:25.183Z | Recipient: the***@gmail.com | Subject: Upcoming Appointment Reminder | Status: SENT | JobId: 23 | Error: None
+
+✓ Nodemailer SMTP connection verified successfully to smtp.gmail.com:587!
+
+BullMQ Queue Status:
+  - Waiting: 0
+  - Active: 0
+  - Completed: 30
+  - Failed: 0
+  - Delayed: 0

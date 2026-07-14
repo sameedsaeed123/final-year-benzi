@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Support Ticket Created - #{{ticketId}}</title>
+  <style>
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+    body { margin: 0; padding: 0; width: 100% !important; height: 100% !important; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #F8F9FA; color: #2C3E50; }
+    .email-container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+    .header { background: linear-gradient(135deg, #4A90E2 0%, #50E3C2 100%); padding: 30px 20px; text-align: center; }
+    .logo { font-size: 32px; font-weight: bold; color: #ffffff; text-decoration: none; letter-spacing: 2px; }
+    .content { padding: 40px 30px; }
+    .greeting { font-size: 24px; font-weight: 600; color: #2C3E50; margin: 0 0 20px 0; }
+    .body-text { font-size: 16px; line-height: 1.6; color: #2C3E50; margin: 0 0 20px 0; }
+    .info-box { background-color: #F9FAFB; border: 1px solid #E5E7EB; padding: 20px; margin: 20px 0; border-radius: 6px; }
+    .info-title { font-weight: 700; font-size: 16px; color: #2C3E50; margin: 0 0 10px 0; }
+    .info-item { font-size: 15px; margin: 5px 0; color: #4B5563; }
+    .info-label { font-weight: 600; color: #2C3E50; }
+    .cta-button { display: inline-block; padding: 14px 32px; background-color: #4A90E2; color: #ffffff !important; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600; margin: 20px 0; }
+    .cta-button:hover { background-color: #3A7BC8; }
+    .fallback-link { font-size: 14px; color: #6c757d; margin: 20px 0; }
+    .fallback-link a { color: #4A90E2; word-break: break-all; }
+    .footer { background-color: #2C3E50; padding: 30px 20px; text-align: center; color: #ffffff; }
+    .footer-text { font-size: 14px; margin: 5px 0; color: #ffffff; }
+    .footer-link { color: #50E3C2; text-decoration: none; margin: 0 10px; }
+    .footer-link:hover { text-decoration: underline; }
+    @media only screen and (max-width: 600px) {
+      .email-container { width: 100% !important; }
+      .content { padding: 30px 20px !important; }
+      .greeting { font-size: 20px !important; }
+      .body-text { font-size: 15px !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="header">
+      <div class="logo">BENZI</div>
+    </div>
+    
+    <div class="content">
+      <h1 class="greeting">Hi {{recipientName}},</h1>
+      
+      <p class="body-text">
+        Thank you for contacting BENZI support. We have received your support ticket. A member of our support team will review your request and get back to you as soon as possible.
+      </p>
+      
+      <div class="info-box">
+        <div class="info-title">Support Ticket Details</div>
+        <div class="info-item"><span class="info-label">Ticket ID:</span> #{{ticketId}}</div>
+        <div class="info-item"><span class="info-label">Subject:</span> {{ticketSubject}}</div>
+        <div class="info-item"><span class="info-label">Status:</span> Pending</div>
+      </div>
+      
+      <p class="body-text">
+        You can view your ticket and add updates or reply to support messages by clicking the button below:
+      </p>
+      
+      <div style="text-align: center;">
+        <a href="{{ticketUrl}}" class="cta-button">View Support Ticket</a>
+      </div>
+      
+      <p class="fallback-link">
+        If the button doesn't work, copy and paste this link into your browser:<br>
+        <a href="{{ticketUrl}}">{{ticketUrl}}</a>
+      </p>
+      
+      <p class="body-text">
+        Best regards,<br>
+        <strong>The BENZI Team</strong>
+      </p>
+    </div>
+    
+    <div class="footer">
+      <p class="footer-text"><strong>BENZI</strong> Mental Health Platform</p>
+      <p class="footer-text">&copy; {{currentYear}} BENZI. All rights reserved.</p>
+      <p class="footer-text">
+        <a href="{{preferencesUrl}}" class="footer-link">Email Preferences</a>
+        <a href="mailto:support@benzi.com" class="footer-link">Support</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>

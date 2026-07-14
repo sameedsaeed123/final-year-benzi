@@ -1,0 +1,69 @@
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "background": "#ffffff",
+    "fontFamily": "arial, helvetica, sans-serif",
+    "fontSize": "14px",
+    "primaryColor": "#E9F6F3",
+    "primaryTextColor": "#13322F",
+    "primaryBorderColor": "#0F766E",
+    "lineColor": "#0D9488"
+  },
+  "flowchart": { "htmlLabels": false, "padding": 10, "nodeSpacing": 30, "rankSpacing": 45, "curve": "basis" }
+}}%%
+flowchart TB
+    E1[Patient]
+    E2[Therapist]
+    E3[Admin]
+    E4[Stripe]
+    E5[Email Service]
+
+    P1(("1.0<br/>Auth +<br/>2FA"))
+    P2(("2.0<br/>Appointments"))
+    P3(("3.0<br/>Messaging"))
+    P4(("4.0<br/>Records + AI"))
+    P5(("5.0<br/>Billing"))
+    P6(("6.0<br/>Admin +<br/>Notify"))
+
+    D1[(D1 Users)]
+    D2[(D2 Appointments)]
+    D3[(D3 Messages)]
+    D4[(D4 Records)]
+    D5[(D5 AI Data)]
+    D6[(D6 Subscriptions)]
+
+    E1 -->|login / register| P1
+    E2 -->|login| P1
+    E3 -->|login| P1
+    P1 <-->|credentials| D1
+
+    E1 -->|book session| P2
+    E2 -->|confirm| P2
+    P2 <-->|appointment| D2
+    P2 -->|reminders| P6
+
+    E1 <-->|messages| P3
+    E2 <-->|messages| P3
+    P3 <-->|chat history| D3
+
+    E1 -->|upload / AI chat| P4
+    E2 -->|notes| P4
+    P4 <-->|records| D4
+    P4 <-->|mood · goals · embeddings| D5
+    P4 -->|crisis alert| P6
+
+    E2 -->|payment| P5
+    P5 <-->|Stripe| E4
+    P5 <-->|plan & usage| D6
+
+    E3 -->|manage platform| P6
+    P6 <-->|read| D1
+    P6 <-->|read| D2
+    P6 -->|notifications| E5
+
+    classDef entity fill:#0F766E,stroke:#0B3B38,color:#ffffff,stroke-width:1.5px
+    classDef process fill:#E9F6F3,stroke:#0F766E,color:#13322F,stroke-width:1.5px
+    classDef store fill:#D7EEEA,stroke:#0F766E,color:#13322F,stroke-width:1.5px
+    class E1,E2,E3,E4,E5 entity
+    class P1,P2,P3,P4,P5,P6 process
+    class D1,D2,D3,D4,D5,D6 store

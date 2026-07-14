@@ -1,0 +1,9 @@
+
+
+
+	Group ID	F25CS186
+	Project Title	Intelligent Secure Meditation Counselor Patient Care System with AI Virtual Assistant (Benzi — AI-Assisted Mental Health Support Platform)
+	Advisor Name	Ms. Misha Asif
+	L1F22BSCS0956 SAMEED SAEED
+	L1F22BSCS1111 FAIZYAB AHMAD
+	L1F22BSCS0976 HASSAN HAYAT

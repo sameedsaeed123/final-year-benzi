@@ -1,0 +1,25 @@
+Hello {{recipientName}},
+
+A new appointment has been booked with you on the BENZI platform.
+
+Booking Details:
+------------------------------------------
+Patient: {{patientName}}
+Date: {{appointmentDate}}
+Time: {{appointmentTime}}
+Location: {{location}}
+{{#if meetLink}}
+Video Link: {{meetLink}}
+{{/if}}
+Price: Rs. {{price}}
+Payment Method: {{paymentMethod}}
+------------------------------------------
+
+Please log into your therapist dashboard to review the appointment and verify payments.
+
+{{#if appointmentUrl}}
+View appointment here: {{appointmentUrl}}
+{{/if}}
+
+Best regards,
+The BENZI Team

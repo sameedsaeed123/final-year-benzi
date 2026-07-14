@@ -1,0 +1,26 @@
+Hi {{recipientName}},
+
+The payment status of your appointment with {{therapistName}} has been updated.
+
+Payment Status: {{paymentStatus}}
+
+Appointment Details:
+------------------------------------------
+Date: {{appointmentDate}}
+Time: {{appointmentTime}}
+Therapist: {{therapistName}}
+Price: Rs. {{price}}
+------------------------------------------
+
+{{#ifEquals paymentStatus "VERIFIED"}}
+Your payment has been successfully confirmed. Your appointment is now fully verified and confirmed!
+{{else}}
+Unfortunately, your payment screenshot was not verified by the therapist. Please view your appointment details to upload a valid payment proof or contact your therapist.
+{{/ifEquals}}
+
+{{#if appointmentUrl}}
+View your appointment details here: {{appointmentUrl}}
+{{/if}}
+
+Best regards,
+The BENZI Team
